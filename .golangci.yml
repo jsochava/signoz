@@ -1,3 +1,4 @@
+version: 2
 linters:
   default: standard
   enable:
@@ -28,10 +29,15 @@ linters-settings:
       noerrors:
         deny:
           - pkg: "errors"
-            desc: "Do not use errors package. Use github.com/SigNoz/signoz/pkg/errors instead."
+            desc: "Do not use the standard errors package. Use github.com/SigNoz/signoz/pkg/errors instead."
   iface:
     enable:
       - identical
+  forbidigo:
+    forbid:
+      - pattern: ^fmt\.Errorf$
+        msg: "Use github.com/SigNoz/signoz/pkg/errors (Errorf/Wrap/Wrapf) instead of fmt.Errorf."
+
 issues:
   exclude-dirs:
     - "pkg/query-service"

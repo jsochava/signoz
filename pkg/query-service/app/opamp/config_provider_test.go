@@ -2,10 +2,10 @@ package opamp
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"testing"
 
+	errors "github.com/SigNoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/instrumentation/instrumentationtest"
 	"github.com/SigNoz/signoz/pkg/modules/organization/implorganization"
 	"github.com/SigNoz/signoz/pkg/query-service/app/opamp/model"
@@ -20,7 +20,6 @@ import (
 	"github.com/knadh/koanf/providers/rawbytes"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/open-telemetry/opamp-go/protobufs"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/maps"
 )
@@ -275,13 +274,13 @@ func GetStringValueFromYaml(
 	serializedYaml []byte, path string,
 ) (string, error) {
 	if len(serializedYaml) < 1 {
-		return "", fmt.Errorf("yaml data is empty")
+		return "", errors.Errorf("yaml data is empty")
 	}
 
 	k := koanf.New(".")
 	err := k.Load(rawbytes.Provider(serializedYaml), yaml.Parser())
 	if err != nil {
-		return "", errors.Wrap(err, "could not unmarshal collector config")
+		return "", errors.Errorf("could not unmarshal collector config: %v", err)
 	}
 
 	return k.String("extensions.zpages.endpoint"), nil

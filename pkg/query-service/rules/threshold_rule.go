@@ -38,6 +38,9 @@ import (
 	querierV5 "github.com/SigNoz/signoz/pkg/querier"
 
 	qbtypes "github.com/SigNoz/signoz/pkg/types/querybuildertypes/querybuildertypesv5"
+
+	// NEW: use SigNoz errors instead of fmt.Errorf
+	"github.com/SigNoz/signoz/pkg/errors"
 )
 
 type ThresholdRule struct {
@@ -353,7 +356,7 @@ func (r *ThresholdRule) prepareLinksToTracesV5(ctx context.Context, ts time.Time
 
 	for _, query := range r.ruleCondition.CompositeQuery.Queries {
 		if query.Type == qbtypes.QueryTypeBuilder {
-			switch spec := query.Spec.(type) {
+			switch spec := range query.Spec.(type) {
 			case qbtypes.QueryBuilderQuery[qbtypes.TraceAggregation]:
 				q = spec
 			}
@@ -386,7 +389,7 @@ func (r *ThresholdRule) buildAndRunQuery(ctx context.Context, orgID valuer.UUID,
 	}
 	err = r.PopulateTemporality(ctx, orgID, params)
 	if err != nil {
-		return nil, fmt.Errorf("internal error while setting temporality")
+		return nil, errors.NewInternalf("internal error while setting temporality")
 	}
 
 	if params.CompositeQuery.QueryType == v3.QueryTypeBuilder {
@@ -435,14 +438,14 @@ func (r *ThresholdRule) buildAndRunQuery(ctx context.Context, orgID valuer.UUID,
 
 	if err != nil {
 		r.logger.ErrorContext(ctx, "failed to get alert query range result", "rule_name", r.Name(), "error", err, "query_errors", queryErrors)
-		return nil, fmt.Errorf("internal error while querying")
+		return nil, errors.NewInternalf("internal error while querying")
 	}
 
 	if params.CompositeQuery.QueryType == v3.QueryTypeBuilder {
 		results, err = postprocess.PostProcessResult(results, params)
 		if err != nil {
 			r.logger.ErrorContext(ctx, "failed to post process result", "rule_name", r.Name(), "error", err)
-			return nil, fmt.Errorf("internal error while post processing")
+			return nil, errors.NewInternalf("internal error while post processing")
 		}
 	}
 
@@ -511,7 +514,7 @@ func (r *ThresholdRule) buildAndRunQueryV5(ctx context.Context, orgID valuer.UUI
 
 	if err != nil {
 		r.logger.ErrorContext(ctx, "failed to get alert query result", "rule_name", r.Name(), "error", err)
-		return nil, fmt.Errorf("internal error while querying")
+		return nil, errors.NewInternalf("internal error while querying")
 	}
 
 	for _, item := range v5Result.Data.Results {
@@ -621,7 +624,7 @@ func (r *ThresholdRule) Eval(ctx context.Context, ts time.Time) (interface{}, er
 
 		tmplData := ruletypes.AlertTemplateData(l, value, threshold)
 		// Inject some convenience variables that are easier to remember for users
-		// who are not used to Go's templating system.
+		// who are not used to Go's templeting system.
 		defs := "{{$labels := .Labels}}{{$value := .Value}}{{$threshold := .Threshold}}"
 
 		// utility function to apply go template on labels and annotations
@@ -685,7 +688,7 @@ func (r *ThresholdRule) Eval(ctx context.Context, ts time.Time) (interface{}, er
 		resultFPs[h] = struct{}{}
 
 		if _, ok := alerts[h]; ok {
-			return nil, fmt.Errorf("duplicate alert found, vector contains metrics with the same labelset after applying alert labels")
+			return nil, errors.NewInternalf("duplicate alert found, vector contains metrics with the same labelset after applying alert labels")
 		}
 
 		alerts[h] = &ruletypes.Alert{

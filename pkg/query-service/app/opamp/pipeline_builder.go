@@ -1,9 +1,9 @@
 package opamp
 
 import (
-	"fmt"
 	"sync"
 
+	errors "github.com/SigNoz/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -114,7 +114,7 @@ func buildPipeline(signal Signal, current []interface{}) ([]interface{}, error) 
 		lockTracesPipelineSpec.Lock()
 		defer lockTracesPipelineSpec.Unlock()
 	default:
-		return nil, fmt.Errorf("invalid signal")
+		return nil, errors.Errorf("invalid signal")
 	}
 
 	pipeline := current
@@ -189,7 +189,7 @@ func buildPipeline(signal Signal, current []interface{}) ([]interface{}, error) 
 	if checkDuplicates(pipeline) {
 		// duplicates are most likely because the processor sequence in effective config conflicts
 		// with the planned sequence as per planned pipeline
-		return pipeline, fmt.Errorf("the effective config has an unexpected processor sequence: %v", pipeline)
+		return pipeline, errors.Errorf("the effective config has an unexpected processor sequence: %v", pipeline)
 	}
 
 	return pipeline, nil

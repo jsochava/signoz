@@ -124,7 +124,7 @@ func WithSQLStore(sqlstore sqlstore.SQLStore) RuleOption {
 
 func NewBaseRule(id string, orgID valuer.UUID, p *ruletypes.PostableRule, reader interfaces.Reader, opts ...RuleOption) (*BaseRule, error) {
 	if p.RuleCondition == nil || !p.RuleCondition.IsValid() {
-		return nil, fmt.Errorf("invalid rule condition")
+		return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "invalid rule condition")
 	}
 	threshold, err := p.RuleCondition.Thresholds.GetRuleThreshold()
 	if err != nil {
@@ -421,7 +421,7 @@ func (r *BaseRule) RecordRuleStateHistory(ctx context.Context, prevState, curren
 		zap.L().Debug("newState", zap.String("ruleid", r.ID()), zap.Any("newState", newState))
 
 		// if there is a change in the overall state, update the overall state
-		if lastSavedState[0].OverallState != newState {
+	 if lastSavedState[0].OverallState != newState {
 			for fingerprint, item := range revisedItemsToAdd {
 				item.OverallState = newState
 				item.OverallStateChanged = true

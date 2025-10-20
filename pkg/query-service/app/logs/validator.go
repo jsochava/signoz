@@ -1,9 +1,9 @@
 package logs
 
 import (
-	"fmt"
 	"regexp"
 
+	"github.com/SigNoz/signoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/query-service/constants"
 	"github.com/SigNoz/signoz/pkg/query-service/model"
 	v3 "github.com/SigNoz/signoz/pkg/query-service/model/v3"
@@ -11,30 +11,37 @@ import (
 
 func ValidateUpdateFieldPayload(field *model.UpdateField) error {
 	if field.Name == "" {
-		return fmt.Errorf("name cannot be empty")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "name cannot be empty")
 	}
 	if field.Type == "" {
-		return fmt.Errorf("type cannot be empty")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "type cannot be empty")
 	}
 	if field.DataType == "" {
-		return fmt.Errorf("dataType cannot be empty")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "dataType cannot be empty")
 	}
 
-	matched, err := regexp.MatchString(fmt.Sprintf("^(%s|%s|%s)$", constants.Static, constants.Attributes, constants.Resources), field.Type)
+	matched, err := regexp.MatchString(
+		"^("+constants.Static+"|"+constants.Attributes+"|"+constants.Resources+")$",
+		field.Type,
+	)
 	if err != nil {
+		// Regex failure would indicate a programmer/config error; bubble up as-is.
 		return err
 	}
 	if !matched {
-		return fmt.Errorf("type %s not supported", field.Type)
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "type %s not supported", field.Type)
 	}
 
 	if field.IndexType != "" {
-		matched, err := regexp.MatchString(`^(minmax|set\([0-9]\)|bloom_filter\((0?.?[0-9]+|1)\)|tokenbf_v1\([0-9]+,[0-9]+,[0-9]+\)|ngrambf_v1\([0-9]+,[0-9]+,[0-9]+,[0-9]+\))$`, field.IndexType)
+		matched, err := regexp.MatchString(
+			`^(minmax|set\([0-9]\)|bloom_filter\((0?.?[0-9]+|1)\)|tokenbf_v1\([0-9]+,[0-9]+,[0-9]+\)|ngrambf_v1\([0-9]+,[0-9]+,[0-9]+,[0-9]+\))$`,
+			field.IndexType,
+		)
 		if err != nil {
 			return err
 		}
 		if !matched {
-			return fmt.Errorf("index type %s not supported", field.IndexType)
+			return errors.NewInvalidInputf(errors.CodeInvalidInput, "index type %s not supported", field.IndexType)
 		}
 	}
 	return nil
@@ -42,32 +49,38 @@ func ValidateUpdateFieldPayload(field *model.UpdateField) error {
 
 func ValidateUpdateFieldPayloadV2(field *model.UpdateField) error {
 	if field.Name == "" {
-		return fmt.Errorf("name cannot be empty")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "name cannot be empty")
 	}
 	if field.Type == "" {
-		return fmt.Errorf("type cannot be empty")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "type cannot be empty")
 	}
 	if field.DataType == "" {
-		return fmt.Errorf("dataType cannot be empty")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "dataType cannot be empty")
 	}
 
 	// the logs api uses the old names i.e attributes and resources while traces use tag and attribute.
 	// update log api to use tag and attribute.
-	matched, err := regexp.MatchString(fmt.Sprintf("^(%s|%s)$", v3.AttributeKeyTypeTag, v3.AttributeKeyTypeResource), field.Type)
+	matched, err := regexp.MatchString(
+		"^("+string(v3.AttributeKeyTypeTag)+"|"+string(v3.AttributeKeyTypeResource)+")$",
+		field.Type,
+	)
 	if err != nil {
 		return err
 	}
 	if !matched {
-		return fmt.Errorf("type %s not supported", field.Type)
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "type %s not supported", field.Type)
 	}
 
 	if field.IndexType != "" {
-		matched, err := regexp.MatchString(`^(minmax|set\([0-9]\)|bloom_filter\((0?.?[0-9]+|1)\)|tokenbf_v1\([0-9]+,[0-9]+,[0-9]+\)|ngrambf_v1\([0-9]+,[0-9]+,[0-9]+,[0-9]+\))$`, field.IndexType)
+		matched, err := regexp.MatchString(
+			`^(minmax|set\([0-9]\)|bloom_filter\((0?.?[0-9]+|1)\)|tokenbf_v1\([0-9]+,[0-9]+,[0-9]+\)|ngrambf_v1\([0-9]+,[0-9]+,[0-9]+,[0-9]+\))$`,
+			field.IndexType,
+		)
 		if err != nil {
 			return err
 		}
 		if !matched {
-			return fmt.Errorf("index type %s not supported", field.IndexType)
+			return errors.NewInvalidInputf(errors.CodeInvalidInput, "index type %s not supported", field.IndexType)
 		}
 	}
 	return nil

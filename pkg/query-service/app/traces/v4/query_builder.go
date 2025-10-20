@@ -287,6 +287,9 @@ func buildTracesQuery(start, end, step int64, mq *v3.BuilderQuery, panelType v3.
 	}
 
 	spanScopeSubQuery, err := buildSpanScopeQuery(mq.Filters)
+	if err != nil {
+		return "", err
+	}
 	if spanScopeSubQuery != "" {
 		filterSubQuery = filterSubQuery + " AND " + spanScopeSubQuery
 	}

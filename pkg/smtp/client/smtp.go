@@ -117,7 +117,7 @@ func (c *Client) Do(ctx context.Context, tos []*mail.Address, subject string, co
 	if c.hello != "" {
 		err = smtpClient.Hello(c.hello)
 		if err != nil {
-			return fmt.Errorf("failed to send EHLO command: %w", err)
+			return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to send EHLO command: %s", err.Error())
 		}
 	}
 
@@ -125,7 +125,7 @@ func (c *Client) Do(ctx context.Context, tos []*mail.Address, subject string, co
 	if !c.tls.Enabled {
 		if ok, _ := smtpClient.Extension("STARTTLS"); ok {
 			if err := smtpClient.StartTLS(c.tlsConfig); err != nil {
-				return fmt.Errorf("failed to send STARTTLS command: %w", err)
+				return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to send STARTTLS command: %s", err.Error())
 			}
 		}
 	}
@@ -136,32 +136,32 @@ func (c *Client) Do(ctx context.Context, tos []*mail.Address, subject string, co
 		if c.auth.Username != "" {
 			auth, err := c.smtpAuth(ctx, mech)
 			if err != nil {
-				return fmt.Errorf("failed to find auth mechanism: %w", err)
+				return errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "failed to find auth mechanism: %s", err.Error())
 			}
 
 			// Send the AUTH command.
 			if err := smtpClient.Auth(auth); err != nil {
-				return fmt.Errorf("failed to auth: %T: %w", auth, err)
+				return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to auth: %T: %s", auth, err.Error())
 			}
 		}
 	}
 
 	// Send the MAIL command.
 	if err = smtpClient.Mail(c.from.Address); err != nil {
-		return fmt.Errorf("failed to send MAIL command: %w", err)
+		return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to send MAIL command: %s", err.Error())
 	}
 
 	// Send the RCPT command for each recipient.
 	for _, addr := range tos {
 		if err = smtpClient.Rcpt(addr.Address); err != nil {
-			return fmt.Errorf("failed to send RCPT command: %w", err)
+			return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to send RCPT command: %s", err.Error())
 		}
 	}
 
 	// Send the email headers and body.
 	message, err := smtpClient.Data()
 	if err != nil {
-		return fmt.Errorf("failed to send DATA command: %w", err)
+		return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to send DATA command: %s", err.Error())
 	}
 
 	closeOnce := sync.OnceValue(func() error {
@@ -200,7 +200,7 @@ func (c *Client) Do(ctx context.Context, tos []*mail.Address, subject string, co
 
 	_, err = message.Write(buffer.Bytes())
 	if err != nil {
-		return fmt.Errorf("failed to write headers: %w", err)
+		return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to write headers: %s", err.Error())
 	}
 
 	// Text template
@@ -210,17 +210,17 @@ func (c *Client) Do(ctx context.Context, tos []*mail.Address, subject string, co
 			"Content-Type":              {"text/plain; charset=UTF-8"},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to create part for text template: %w", err)
+			return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to create part for text template: %s", err.Error())
 		}
 
 		qw := quotedprintable.NewWriter(w)
 		_, err = qw.Write([]byte(body))
 		if err != nil {
-			return fmt.Errorf("failed to write text part: %w", err)
+			return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to write text part: %s", err.Error())
 		}
 		err = qw.Close()
 		if err != nil {
-			return fmt.Errorf("failed to close text part: %w", err)
+			return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to close text part: %s", err.Error())
 		}
 	}
 
@@ -233,33 +233,33 @@ func (c *Client) Do(ctx context.Context, tos []*mail.Address, subject string, co
 			"Content-Type":              {"text/html; charset=UTF-8"},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to create part for html template: %w", err)
+			return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to create part for html template: %s", err.Error())
 		}
 
 		qw := quotedprintable.NewWriter(w)
 		_, err = qw.Write([]byte(body))
 		if err != nil {
-			return fmt.Errorf("failed to write HTML part: %w", err)
+			return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to write HTML part: %s", err.Error())
 		}
 		err = qw.Close()
 		if err != nil {
-			return fmt.Errorf("failed to close HTML part: %w", err)
+			return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to close HTML part: %s", err.Error())
 		}
 	}
 
 	err = multipartWriter.Close()
 	if err != nil {
-		return fmt.Errorf("failed to close multipartWriter: %w", err)
+		return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to close multipartWriter: %s", err.Error())
 	}
 
 	_, err = message.Write(multipartBuffer.Bytes())
 	if err != nil {
-		return fmt.Errorf("failed to write body buffer: %w", err)
+		return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to write body buffer: %s", err.Error())
 	}
 
 	// Complete the message and await response.
 	if err = closeOnce(); err != nil {
-		return fmt.Errorf("failed to deliver: %w", err)
+		return errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to deliver: %s", err.Error())
 	}
 
 	success = true
@@ -317,7 +317,7 @@ func (c *Client) dial(ctx context.Context) (net.Conn, error) {
 	if c.tls.Enabled || c.port == "465" {
 		conn, err = tls.Dial("tcp", c.address, c.tlsConfig)
 		if err != nil {
-			return nil, fmt.Errorf("failed to establish TLS connection to server: %w", err)
+			return nil, errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to establish TLS connection to server: %s", err.Error())
 		}
 
 		return conn, nil
@@ -326,7 +326,7 @@ func (c *Client) dial(ctx context.Context) (net.Conn, error) {
 	var d net.Dialer
 	conn, err = d.DialContext(ctx, "tcp", c.address)
 	if err != nil {
-		return nil, fmt.Errorf("failed to establish connection to server: %w", err)
+		return nil, errors.Newf(errors.TypeInternal, errors.CodeInternal, "failed to establish connection to server: %s", err.Error())
 	}
 
 	return conn, nil
@@ -341,7 +341,7 @@ func newTLSConfig(config TLS, serverName string) (*tls.Config, error) {
 	if config.CertFilePath != "" {
 		cert, err := tls.LoadX509KeyPair(config.CertFilePath, config.KeyFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load cert or key file: %w", err)
+			return nil, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "failed to load cert or key file: %s", err.Error())
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
@@ -349,11 +349,11 @@ func newTLSConfig(config TLS, serverName string) (*tls.Config, error) {
 	if config.CAFilePath != "" {
 		ca, err := os.ReadFile(config.CAFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load CA file: %w", err)
+			return nil, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "failed to load CA file: %s", err.Error())
 		}
 		tlsConfig.RootCAs = x509.NewCertPool()
 		if !tlsConfig.RootCAs.AppendCertsFromPEM(ca) {
-			return nil, fmt.Errorf("failed to append CA file: %s", config.CAFilePath)
+			return nil, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "failed to append CA file: %s", config.CAFilePath)
 		}
 	}
 

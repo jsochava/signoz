@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	sigerrors "github.com/SigNoz/pkg/errors"
 	"github.com/SigNoz/signoz-otel-collector/utils/fingerprint"
 	"github.com/SigNoz/signoz/pkg/query-service/model"
 	v3 "github.com/SigNoz/signoz/pkg/query-service/model/v3"
@@ -31,7 +32,7 @@ func (r *ClickHouseReader) GetQBFilterSuggestionsForLogs(
 			Limit:      int(req.AttributesLimit),
 		})
 	if err != nil {
-		return nil, model.InternalError(fmt.Errorf("couldn't get attribute keys: %w", err))
+		return nil, model.InternalError(sigerrors.Errorf("couldn't get attribute keys: %w", err))
 	}
 
 	suggestions.AttributeKeys = attribKeysResp.AttributeKeys
@@ -188,7 +189,7 @@ func (r *ClickHouseReader) getValuesForLogAttributes(
 	rows, err := r.db.Query(ctx, query, tagKeyQueryArgs...)
 	if err != nil {
 		zap.L().Error("couldn't query attrib values for suggestions", zap.Error(err))
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"couldn't query attrib values for suggestions: %w", err,
 		))
 	}
@@ -213,7 +214,7 @@ func (r *ClickHouseReader) getValuesForLogAttributes(
 			&tagKey, &stringValue, &float64Value,
 		)
 		if err != nil {
-			return nil, model.InternalError(fmt.Errorf(
+			return nil, model.InternalError(sigerrors.Errorf(
 				"couldn't scan attrib value rows: %w", err,
 			))
 		}
@@ -233,7 +234,7 @@ func (r *ClickHouseReader) getValuesForLogAttributes(
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"couldn't scan attrib value rows: %w", err,
 		))
 	}

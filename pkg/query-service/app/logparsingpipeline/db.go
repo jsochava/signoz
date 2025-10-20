@@ -3,8 +3,9 @@ package logparsingpipeline
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
+
+	sigerrors "github.com/SigNoz/pkg/errors"
 
 	"github.com/SigNoz/signoz/pkg/query-service/model"
 	"github.com/SigNoz/signoz/pkg/sqlstore"
@@ -55,7 +56,7 @@ func (r *Repo) insertPipeline(
 
 	claims, errv2 := authtypes.ClaimsFromContext(ctx)
 	if errv2 != nil {
-		return nil, model.UnauthorizedError(fmt.Errorf("failed to get email from context"))
+		return nil, model.UnauthorizedError(sigerrors.Errorf("failed to get email from context"))
 	}
 
 	insertRow := &pipelinetypes.GettablePipeline{
@@ -98,7 +99,7 @@ func (r *Repo) insertPipeline(
 func (r *Repo) getPipelinesByVersion(
 	ctx context.Context, orgID string, version int,
 ) ([]pipelinetypes.GettablePipeline, []error) {
-	var errors []error
+	var errorsList []error
 	storablePipelines := []pipelinetypes.StoreablePipeline{}
 	err := r.sqlStore.BunDB().NewSelect().
 		Model(&storablePipelines).
@@ -110,7 +111,7 @@ func (r *Repo) getPipelinesByVersion(
 		Order("p.order_id ASC").
 		Scan(ctx)
 	if err != nil {
-		return nil, []error{fmt.Errorf("failed to get pipelines from db: %v", err)}
+		return nil, []error{sigerrors.Errorf("failed to get pipelines from db: %v", err)}
 	}
 
 	gettablePipelines := make([]pipelinetypes.GettablePipeline, len(storablePipelines))
@@ -121,14 +122,14 @@ func (r *Repo) getPipelinesByVersion(
 	for i := range storablePipelines {
 		gettablePipelines[i].StoreablePipeline = storablePipelines[i]
 		if err := gettablePipelines[i].ParseRawConfig(); err != nil {
-			errors = append(errors, err)
+			errorsList = append(errorsList, err)
 		}
 		if err := gettablePipelines[i].ParseFilter(); err != nil {
-			errors = append(errors, err)
+			errorsList = append(errorsList, err)
 		}
 	}
 
-	return gettablePipelines, errors
+	return gettablePipelines, errorsList
 }
 
 // GetPipelines returns pipeline and errors (if any)
@@ -149,7 +150,7 @@ func (r *Repo) GetPipeline(
 
 	if len(storablePipelines) == 0 {
 		zap.L().Warn("No row found for ingestion pipeline id", zap.String("id", id))
-		return nil, model.NotFoundError(fmt.Errorf("no row found for ingestion pipeline id %v", id))
+		return nil, model.NotFoundError(sigerrors.Errorf("no row found for ingestion pipeline id %v", id))
 	}
 
 	if len(storablePipelines) == 1 {
@@ -170,7 +171,7 @@ func (r *Repo) GetPipeline(
 		return &gettablePipeline, nil
 	}
 
-	return nil, model.InternalError(fmt.Errorf("multiple pipelines with same id"))
+	return nil, model.InternalError(sigerrors.Errorf("multiple pipelines with same id"))
 }
 
 func (r *Repo) DeletePipeline(ctx context.Context, orgID string, id string) error {

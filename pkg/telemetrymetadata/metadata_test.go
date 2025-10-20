@@ -2,7 +2,6 @@ package telemetrymetadata
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"testing"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/SigNoz/signoz/pkg/telemetrystore/telemetrystoretest"
 	"github.com/SigNoz/signoz/pkg/telemetrytraces"
 	"github.com/SigNoz/signoz/pkg/types/telemetrytypes"
+	errors "github.com/SigNoz/pkg/errors"
 	cmock "github.com/srikanthccv/ClickHouse-go-mock"
 )
 
@@ -26,7 +26,7 @@ func (m *regexMatcher) Match(expectedSQL, actualSQL string) error {
 		return err
 	}
 	if !re.MatchString(actualSQL) {
-		return fmt.Errorf("expected query to contain %s, got %s", expectedSQL, actualSQL)
+		return errors.Errorf("expected query to contain %s, got %s", expectedSQL, actualSQL)
 	}
 	return nil
 }

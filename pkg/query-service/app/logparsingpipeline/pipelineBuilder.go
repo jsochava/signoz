@@ -98,8 +98,8 @@ func getOperators(ops []pipelinetypes.PipelineOperator) ([]pipelinetypes.Pipelin
 			if operator.Type == "regex_parser" {
 				parseFromNotNilCheck, err := fieldNotNilCheck(operator.ParseFrom)
 				if err != nil {
-					return nil, fmt.Errorf(
-						"couldn't generate nil check for parseFrom of regex op %s: %w", operator.Name, err,
+					return nil, errors.WrapInvalidInputf(err, CodeFieldNilCheckType,
+						"couldn't generate nil check for parseFrom of regex op %s", operator.Name,
 					)
 				}
 				operator.If = fmt.Sprintf(
@@ -115,8 +115,8 @@ func getOperators(ops []pipelinetypes.PipelineOperator) ([]pipelinetypes.Pipelin
 			} else if operator.Type == "grok_parser" {
 				parseFromNotNilCheck, err := fieldNotNilCheck(operator.ParseFrom)
 				if err != nil {
-					return nil, fmt.Errorf(
-						"couldn't generate nil check for parseFrom of grok op %s: %w", operator.Name, err,
+					return nil, errors.WrapInvalidInputf(err, CodeFieldNilCheckType,
+						"couldn't generate nil check for parseFrom of grok op %s", operator.Name,
 					)
 				}
 				operator.If = parseFromNotNilCheck
@@ -124,7 +124,9 @@ func getOperators(ops []pipelinetypes.PipelineOperator) ([]pipelinetypes.Pipelin
 			} else if operator.Type == "json_parser" {
 				operators, err := processJSONParser(&operator)
 				if err != nil {
-					return nil, fmt.Errorf("couldn't process json_parser op %s: %s", operator.Name, err)
+					return nil, errors.WrapInvalidInputf(err, CodeInvalidOperatorType,
+						"couldn't process json_parser op %s", operator.Name,
+					)
 				}
 
 				filteredOp = append(filteredOp, operators...)
@@ -134,9 +136,9 @@ func getOperators(ops []pipelinetypes.PipelineOperator) ([]pipelinetypes.Pipelin
 					expression := strings.TrimSuffix(strings.TrimPrefix(operator.Value, "EXPR("), ")")
 					fieldsNotNilCheck, err := fieldsReferencedInExprNotNilCheck(expression)
 					if err != nil {
-						return nil, fmt.Errorf(
-							"could'nt generate nil check for fields referenced in value expr of add operator %s: %w",
-							operator.Name, err,
+						return nil, errors.WrapInvalidInputf(err, CodeFieldNilCheckType,
+							"could'nt generate nil check for fields referenced in value expr of add operator %s",
+							operator.Name,
 						)
 					}
 					if fieldsNotNilCheck != "" {
@@ -146,16 +148,16 @@ func getOperators(ops []pipelinetypes.PipelineOperator) ([]pipelinetypes.Pipelin
 			} else if operator.Type == "move" || operator.Type == "copy" {
 				fromNotNilCheck, err := fieldNotNilCheck(operator.From)
 				if err != nil {
-					return nil, fmt.Errorf(
-						"couldn't generate nil check for From field of %s op %s: %w", operator.Type, operator.Name, err,
+					return nil, errors.WrapInvalidInputf(err, CodeFieldNilCheckType,
+						"couldn't generate nil check for From field of %s op %s", operator.Type, operator.Name,
 					)
 				}
 				operator.If = fromNotNilCheck
 			} else if operator.Type == "remove" {
 				fieldNotNilCheck, err := fieldNotNilCheck(operator.Field)
 				if err != nil {
-					return nil, fmt.Errorf(
-						"couldn't generate nil check for field to be removed by op %s: %w", operator.Name, err,
+					return nil, errors.WrapInvalidInputf(err, CodeFieldNilCheckType,
+						"couldn't generate nil check for field to be removed by op %s", operator.Name,
 					)
 				}
 				operator.If = fieldNotNilCheck
@@ -164,8 +166,8 @@ func getOperators(ops []pipelinetypes.PipelineOperator) ([]pipelinetypes.Pipelin
 			} else if operator.Type == "time_parser" {
 				parseFromNotNilCheck, err := fieldNotNilCheck(operator.ParseFrom)
 				if err != nil {
-					return nil, fmt.Errorf(
-						"couldn't generate nil check for parseFrom of time parser op %s: %w", operator.Name, err,
+					return nil, errors.WrapInvalidInputf(err, CodeFieldNilCheckType,
+						"couldn't generate nil check for parseFrom of time parser op %s", operator.Name,
 					)
 				}
 				operator.If = parseFromNotNilCheck
@@ -173,8 +175,8 @@ func getOperators(ops []pipelinetypes.PipelineOperator) ([]pipelinetypes.Pipelin
 				if operator.LayoutType == "strptime" {
 					regex, err := pipelinetypes.RegexForStrptimeLayout(operator.Layout)
 					if err != nil {
-						return nil, fmt.Errorf(
-							"couldn't generate layout regex for time_parser %s: %w", operator.Name, err,
+						return nil, errors.WrapInvalidInputf(err, CodeFieldNilCheckType,
+							"couldn't generate layout regex for time_parser %s", operator.Name,
 						)
 					}
 
@@ -265,6 +267,7 @@ func processJSONParser(parent *pipelinetypes.PipelineOperator) ([]pipelinetypes.
 	// the same array inplace ends up with saving mapping in a reversed order in database
 	cloneAndReverse := func(input []string) []string {
 		cloned := slices.Clone(input)
+		cloned = append([]string(nil), cloned...)
 		slices.Reverse(cloned)
 
 		return cloned
@@ -287,7 +290,9 @@ func processJSONParser(parent *pipelinetypes.PipelineOperator) ([]pipelinetypes.
 
 			fromNotNilCheck, err := fieldNotNilCheck(operator.From)
 			if err != nil {
-				return err
+				return errors.WrapInvalidInputf(err, CodeFieldNilCheckType,
+					"couldn't generate nil check for From field of move op in json_parser %s", parent.Name,
+				)
 			}
 
 			operator.If = fromNotNilCheck
@@ -298,14 +303,12 @@ func processJSONParser(parent *pipelinetypes.PipelineOperator) ([]pipelinetypes.
 	}
 
 	// JSONMapping: host
-	err = generateMoveOperators(mapping[pipelinetypes.Host], `resource["host.name"]`)
-	if err != nil {
+	if err := generateMoveOperators(mapping[pipelinetypes.Host], `resource["host.name"]`); err != nil {
 		return nil, err
 	}
 
 	// JSONMapping: service
-	err = generateMoveOperators(mapping[pipelinetypes.Service], `resource["service.name"]`)
-	if err != nil {
+	if err := generateMoveOperators(mapping[pipelinetypes.Service], `resource["service.name"]`); err != nil {
 		return nil, err
 	}
 
@@ -365,8 +368,7 @@ func processJSONParser(parent *pipelinetypes.PipelineOperator) ([]pipelinetypes.
 			OnError:   signozstanzahelper.SendOnErrorQuiet,
 			ParseFrom: fmt.Sprintf(`%s["%s"]`, parent.ParseTo, keyword),
 		}
-		err := processSeverityParser(&operator)
-		if err != nil {
+		if err := processSeverityParser(&operator); err != nil {
 			return nil, err
 		}
 
@@ -375,14 +377,12 @@ func processJSONParser(parent *pipelinetypes.PipelineOperator) ([]pipelinetypes.
 	}
 
 	// JSONMapping: environment
-	err = generateMoveOperators(mapping[pipelinetypes.Environment], `resource["deployment.environment.name"]`)
-	if err != nil {
+	if err := generateMoveOperators(mapping[pipelinetypes.Environment], `resource["deployment.environment.name"]`); err != nil {
 		return nil, err
 	}
 
 	// JSONMapping: body
-	err = generateMoveOperators(mapping[pipelinetypes.Message], `body`)
-	if err != nil {
+	if err := generateMoveOperators(mapping[pipelinetypes.Message], `body`); err != nil {
 		return nil, err
 	}
 
@@ -491,10 +491,12 @@ func reverseString(s string) string {
 
 // Generate expression for checking that all fields referenced in `expr` have a non nil value in log record.
 // Eg: `attributes.x + len(resource.y)` will return the expression `attributes.x != nil && resource.y != nil`
-func fieldsReferencedInExprNotNilCheck(expr string) (string, error) {
-	referencedFields, err := logFieldsReferencedInExpr(expr)
+func fieldsReferencedInExprNotNilCheck(exprStr string) (string, error) {
+	referencedFields, err := logFieldsReferencedInExpr(exprStr)
 	if err != nil {
-		return "", fmt.Errorf("couldn't extract log fields referenced in expr %s: %w", expr, err)
+		return "", errors.WrapInvalidInputf(err, CodeFieldNilCheckType,
+			"couldn't extract log fields referenced in expr %s", exprStr,
+		)
 	}
 
 	// Generating nil check for deepest fields takes care of their prefixes too.
@@ -515,7 +517,9 @@ func fieldsReferencedInExprNotNilCheck(expr string) (string, error) {
 	for _, field := range deepestFieldRefs {
 		checkExpr, err := fieldNotNilCheck(field)
 		if err != nil {
-			return "", fmt.Errorf("could not create nil check for %s: %w", field, err)
+			return "", errors.WrapInvalidInputf(err, CodeFieldNilCheckType,
+				"could not create nil check for %s", field,
+			)
 		}
 		fieldExprChecks = append(fieldExprChecks, fmt.Sprintf("(%s)", checkExpr))
 	}
@@ -545,11 +549,11 @@ func (v *logFieldsInExprExtractor) Visit(node *ast.Node) {
 	}
 }
 
-func logFieldsReferencedInExpr(expr string) ([]string, error) {
+func logFieldsReferencedInExpr(exprStr string) ([]string, error) {
 	// parse abstract syntax tree for expr
-	exprAst, err := parser.Parse(expr)
+	exprAst, err := parser.Parse(exprStr)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse expr: %w", err)
+		return nil, errors.WrapInvalidInputf(err, CodeInvalidOperatorType, "could not parse expr")
 	}
 
 	// walk ast for expr to collect all member references.

@@ -61,21 +61,26 @@ func getColumnName(key v3.AttributeKey) string {
 	return fmt.Sprintf("%s%s['%s']", filterDataType, filterType, key.Key)
 }
 
-func getClickhouseTracesColumnDataTypeAndType(key v3.AttributeKey) (v3.AttributeKeyType, string) {
-	filterType := key.Type
+// getClickhouseTracesColumnDataTypeAndType determines the ClickHouse column family
+// (e.g., TagMap vs resourceTagsMap) and the data-type prefix (string/number/bool)
+// to build expressions like: stringTagMap['http.method'] or resourceTagsMap['service.name'].
+func getClickhouseTracesColumnDataTypeAndType(key v3.AttributeKey) (string, string) {
+	// data type prefix
 	filterDataType := "string"
 	if key.DataType == v3.AttributeKeyDataTypeFloat64 || key.DataType == v3.AttributeKeyDataTypeInt64 {
 		filterDataType = "number"
 	} else if key.DataType == v3.AttributeKeyDataTypeBool {
 		filterDataType = "bool"
 	}
-	if filterType == v3.AttributeKeyTypeTag {
-		filterType = "TagMap"
-	} else {
-		filterType = "resourceTagsMap"
-		filterDataType = ""
+
+	// map family suffix/name
+	if key.Type == v3.AttributeKeyTypeTag {
+		// stringTagMap/numberTagMap/boolTagMap
+		return "TagMap", filterDataType
 	}
-	return filterType, filterDataType
+
+	// resourceTagsMap does not have a data-type prefix
+	return "resourceTagsMap", ""
 }
 
 func enrichKeyWithMetadata(key v3.AttributeKey, keys map[string]v3.AttributeKey) v3.AttributeKey {
@@ -167,8 +172,9 @@ func buildTracesFilterQuery(fs *v3.FilterSet) (string, error) {
 			if operator, ok := tracesOperatorMappingV3[item.Operator]; ok {
 				switch item.Operator {
 				case v3.FilterOperatorContains, v3.FilterOperatorNotContains:
-					val = utils.QuoteEscapedString(fmt.Sprintf("%v", item.Value))
-					conditions = append(conditions, fmt.Sprintf("%s %s '%%%s%%'", columnName, operator, val))
+					// escape for contains; do not add extra quotes here
+					v := utils.QuoteEscapedString(fmt.Sprintf("%v", item.Value))
+					conditions = append(conditions, fmt.Sprintf("%s %s '%%%s%%'", columnName, operator, v))
 				case v3.FilterOperatorRegex, v3.FilterOperatorNotRegex:
 					conditions = append(conditions, fmt.Sprintf(operator, columnName, fmtVal))
 				case v3.FilterOperatorExists, v3.FilterOperatorNotExists:

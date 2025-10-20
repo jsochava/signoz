@@ -38,14 +38,14 @@ func (ah *APIHandler) CloudIntegrationsGenerateConnectionParams(w http.ResponseW
 
 	orgID, err := valuer.NewUUID(claims.OrgID)
 	if err != nil {
-		render.Error(w, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "orgId is invalid"))
+		render.Error(w, errors.NewInvalidInputf(errors.CodeInvalidInput, "orgId is invalid"))
 		return
 	}
 
 	cloudProvider := mux.Vars(r)["cloudProvider"]
 	if cloudProvider != "aws" {
-		RespondError(w, basemodel.BadRequest(fmt.Errorf(
-			"cloud provider not supported: %s", cloudProvider,
+		RespondError(w, basemodel.BadRequest(errors.NewInvalidInputf(
+			errors.CodeInvalidInput, "cloud provider not supported: %s", cloudProvider,
 		)), nil)
 		return
 	}
@@ -122,15 +122,15 @@ func (ah *APIHandler) getOrCreateCloudIntegrationPAT(ctx context.Context, orgId 
 
 	orgIdUUID, err := valuer.NewUUID(orgId)
 	if err != nil {
-		return "", basemodel.InternalError(fmt.Errorf(
-			"couldn't parse orgId: %w", err,
+		return "", basemodel.InternalError(errors.WrapInvalidInputf(
+			err, errors.CodeInvalidInput, "couldn't parse orgId",
 		))
 	}
 
 	allPats, err := ah.Signoz.Modules.User.ListAPIKeys(ctx, orgIdUUID)
 	if err != nil {
-		return "", basemodel.InternalError(fmt.Errorf(
-			"couldn't list PATs: %w", err,
+		return "", basemodel.InternalError(errors.WrapInvalidInputf(
+			err, errors.CodeInvalidInput, "couldn't list PATs",
 		))
 	}
 	for _, p := range allPats {
@@ -151,15 +151,15 @@ func (ah *APIHandler) getOrCreateCloudIntegrationPAT(ctx context.Context, orgId 
 		0,
 	)
 	if err != nil {
-		return "", basemodel.InternalError(fmt.Errorf(
-			"couldn't create cloud integration PAT: %w", err,
+		return "", basemodel.InternalError(errors.WrapInvalidInputf(
+			err, errors.CodeInvalidInput, "couldn't create cloud integration PAT",
 		))
 	}
 
 	err = ah.Signoz.Modules.User.CreateAPIKey(ctx, newPAT)
 	if err != nil {
-		return "", basemodel.InternalError(fmt.Errorf(
-			"couldn't create cloud integration PAT: %w", err,
+		return "", basemodel.InternalError(errors.WrapInvalidInputf(
+			err, errors.CodeInvalidInput, "couldn't create cloud integration PAT",
 		))
 	}
 	return newPAT.Token, nil
@@ -173,7 +173,7 @@ func (ah *APIHandler) getOrCreateCloudIntegrationUser(
 
 	integrationUserResult, err := ah.Signoz.Modules.User.GetUserByEmailInOrg(ctx, orgId, email)
 	if err != nil && !errors.Ast(err, errors.TypeNotFound) {
-		return nil, basemodel.NotFoundError(fmt.Errorf("couldn't look for integration user: %w", err))
+		return nil, basemodel.NotFoundError(errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "couldn't look for integration user"))
 	}
 
 	if integrationUserResult != nil {
@@ -187,8 +187,8 @@ func (ah *APIHandler) getOrCreateCloudIntegrationUser(
 
 	newUser, err := types.NewUser(cloudIntegrationUser, email, types.RoleViewer.String(), orgId)
 	if err != nil {
-		return nil, basemodel.InternalError(fmt.Errorf(
-			"couldn't create cloud integration user: %w", err,
+		return nil, basemodel.InternalError(errors.WrapInvalidInputf(
+			err, errors.CodeInvalidInput, "couldn't create cloud integration user",
 		))
 	}
 
@@ -196,7 +196,7 @@ func (ah *APIHandler) getOrCreateCloudIntegrationUser(
 
 	err = ah.Signoz.Modules.User.CreateUser(ctx, newUser, user.WithFactorPassword(password))
 	if err != nil {
-		return nil, basemodel.InternalError(fmt.Errorf("couldn't create cloud integration user: %w", err))
+		return nil, basemodel.InternalError(errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "couldn't create cloud integration user"))
 	}
 
 	return newUser, nil
@@ -236,7 +236,8 @@ func getIngestionUrlAndSigNozAPIUrl(ctx context.Context, licenseKey string) (
 	}
 
 	if resp.Status != "success" {
-		return "", "", basemodel.InternalError(fmt.Errorf(
+		return "", "", basemodel.InternalError(errors.NewInvalidInputf(
+			errors.CodeInvalidInput,
 			"couldn't query for deployment info: status: %s, error: %s",
 			resp.Status, resp.Error,
 		))
@@ -247,7 +248,8 @@ func getIngestionUrlAndSigNozAPIUrl(ctx context.Context, licenseKey string) (
 
 	if len(regionDns) < 1 || len(deploymentName) < 1 {
 		// Fail early if actual response structure and expectation here ever diverge
-		return "", "", basemodel.InternalError(fmt.Errorf(
+		return "", "", basemodel.InternalError(errors.NewInvalidInputf(
+			errors.CodeInvalidInput,
 			"deployment info response not in expected shape. couldn't determine region dns and deployment name",
 		))
 	}
@@ -298,7 +300,8 @@ func getOrCreateCloudProviderIngestionKey(
 	}
 
 	if searchResult.Status != "success" {
-		return "", basemodel.InternalError(fmt.Errorf(
+		return "", basemodel.InternalError(errors.NewInvalidInputf(
+			errors.CodeInvalidInput,
 			"couldn't search for cloudprovider ingestion key: status: %s, error: %s",
 			searchResult.Status, searchResult.Error,
 		))
@@ -308,7 +311,8 @@ func getOrCreateCloudProviderIngestionKey(
 		if k.Name == cloudProviderKeyName {
 			if len(k.Value) < 1 {
 				// Fail early if actual response structure and expectation here ever diverge
-				return "", basemodel.InternalError(fmt.Errorf(
+				return "", basemodel.InternalError(errors.NewInvalidInputf(
+					errors.CodeInvalidInput,
 					"ingestion keys search response not as expected",
 				))
 			}
@@ -335,7 +339,8 @@ func getOrCreateCloudProviderIngestionKey(
 	}
 
 	if createKeyResult.Status != "success" {
-		return "", basemodel.InternalError(fmt.Errorf(
+		return "", basemodel.InternalError(errors.NewInvalidInputf(
+			errors.CodeInvalidInput,
 			"couldn't create cloudprovider ingestion key: status: %s, error: %s",
 			createKeyResult.Status, createKeyResult.Error,
 		))
@@ -344,7 +349,8 @@ func getOrCreateCloudProviderIngestionKey(
 	ingestionKey := createKeyResult.Data.Value
 	if len(ingestionKey) < 1 {
 		// Fail early if actual response structure and expectation here ever diverge
-		return "", basemodel.InternalError(fmt.Errorf(
+		return "", basemodel.InternalError(errors.NewInvalidInputf(
+			errors.CodeInvalidInput,
 			"ingestion key creation response not as expected",
 		))
 	}
@@ -379,8 +385,8 @@ func requestAndParseResponse[ResponseType any](
 
 		bodyJson, err := json.Marshal(payload)
 		if err != nil {
-			return nil, basemodel.InternalError(fmt.Errorf(
-				"couldn't serialize request payload to JSON: %w", err,
+			return nil, basemodel.InternalError(errors.WrapInvalidInputf(
+				err, errors.CodeInvalidInput, "couldn't serialize request payload to JSON",
 			))
 		}
 		reqBody = bytes.NewBuffer([]byte(bodyJson))
@@ -388,8 +394,8 @@ func requestAndParseResponse[ResponseType any](
 
 	req, err := http.NewRequestWithContext(ctx, reqMethod, url, reqBody)
 	if err != nil {
-		return nil, basemodel.InternalError(fmt.Errorf(
-			"couldn't prepare request: %w", err,
+		return nil, basemodel.InternalError(errors.WrapInvalidInputf(
+			err, errors.CodeInvalidInput, "couldn't prepare request",
 		))
 	}
 
@@ -403,22 +409,22 @@ func requestAndParseResponse[ResponseType any](
 
 	response, err := client.Do(req)
 	if err != nil {
-		return nil, basemodel.InternalError(fmt.Errorf("couldn't make request: %w", err))
+		return nil, basemodel.InternalError(errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "couldn't make request"))
 	}
 
 	defer response.Body.Close()
 
 	respBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, basemodel.InternalError(fmt.Errorf("couldn't read response: %w", err))
+		return nil, basemodel.InternalError(errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "couldn't read response"))
 	}
 
 	var resp ResponseType
 
 	err = json.Unmarshal(respBody, &resp)
 	if err != nil {
-		return nil, basemodel.InternalError(fmt.Errorf(
-			"couldn't unmarshal gateway response into %T", resp,
+		return nil, basemodel.InternalError(errors.WrapInvalidInputf(
+			err, errors.CodeInvalidInput, "couldn't unmarshal gateway response into %T", resp,
 		))
 	}
 

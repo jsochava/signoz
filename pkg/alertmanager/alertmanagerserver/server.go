@@ -2,7 +2,6 @@ package alertmanagerserver
 
 import (
 	"context"
-	"fmt"
 	"github.com/prometheus/alertmanager/types"
 	"golang.org/x/sync/errgroup"
 	"log/slog"
@@ -395,9 +394,9 @@ func (server *Server) TestAlert(ctx context.Context, receiversMap map[*alertmana
 				receiver, err := server.alertmanagerConfig.GetReceiver(receiverName)
 				if err != nil {
 					mu.Lock()
-					errs = append(errs, fmt.Errorf("failed to get receiver %q: %w", receiverName, err))
+					errs = append(errs, errors.Errorf("failed to get receiver %q: %w", receiverName, err))
 					mu.Unlock()
-					return nil // Return nil to continue processing other goroutines
+					return nil // keep testing other receivers
 				}
 
 				err = alertmanagertypes.TestReceiver(
@@ -412,10 +411,10 @@ func (server *Server) TestAlert(ctx context.Context, receiversMap map[*alertmana
 				)
 				if err != nil {
 					mu.Lock()
-					errs = append(errs, fmt.Errorf("receiver %q test failed: %w", receiverName, err))
+					errs = append(errs, errors.Errorf("receiver %q test failed: %w", receiverName, err))
 					mu.Unlock()
 				}
-				return nil // Return nil to continue processing other goroutines
+				return nil
 			})
 		}
 	}

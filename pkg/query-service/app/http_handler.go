@@ -80,6 +80,7 @@ import (
 	"github.com/SigNoz/signoz/pkg/version"
 
 	querierAPI "github.com/SigNoz/signoz/pkg/querier"
+	sigerrors "github.com/SigNoz/pkg/errors"
 )
 
 type status string
@@ -677,7 +678,7 @@ func (aH *APIHandler) getRule(w http.ResponseWriter, r *http.Request) {
 	ruleResponse, err := aH.ruleManager.GetRule(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: fmt.Errorf("rule not found")}, nil)
+			RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: sigerrors.Errorf("rule not found")}, nil)
 			return
 		}
 		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: err}, nil)
@@ -1164,13 +1165,13 @@ func prepareQuery(r *http.Request) (string, error) {
 	var postData *model.DashboardVars
 
 	if err := json.NewDecoder(r.Body).Decode(&postData); err != nil {
-		return "", fmt.Errorf("failed to decode request body: %v", err)
+		return "", sigerrors.Errorf("failed to decode request body: %v", err)
 	}
 
 	query := strings.TrimSpace(postData.Query)
 
 	if query == "" {
-		return "", fmt.Errorf("query is required")
+		return "", sigerrors.Errorf("query is required")
 	}
 
 	notAllowedOps := []string{
@@ -1184,7 +1185,7 @@ func prepareQuery(r *http.Request) (string, error) {
 
 	for _, op := range notAllowedOps {
 		if strings.Contains(strings.ToLower(query), op) {
-			return "", fmt.Errorf("operation %s is not allowed", op)
+			return "", sigerrors.Errorf("operation %s is not allowed", op)
 		}
 	}
 
@@ -1395,7 +1396,7 @@ func (aH *APIHandler) deleteRule(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: fmt.Errorf("rule not found")}, nil)
+			RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: sigerrors.Errorf("rule not found")}, nil)
 			return
 		}
 		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: err}, nil)
@@ -1427,7 +1428,7 @@ func (aH *APIHandler) patchRule(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: fmt.Errorf("rule not found")}, nil)
+			RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: sigerrors.Errorf("rule not found")}, nil)
 			return
 		}
 		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: err}, nil)
@@ -1457,7 +1458,7 @@ func (aH *APIHandler) editRule(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: fmt.Errorf("rule not found")}, nil)
+			RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: sigerrors.Errorf("rule not found")}, nil)
 			return
 		}
 		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: err}, nil)
@@ -3468,7 +3469,7 @@ func (aH *APIHandler) calculateLogsConnectionStatus(ctx context.Context, orgID v
 	}
 	queryRes, _, err := aH.querier.QueryRange(ctx, orgID, qrParams)
 	if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"could not query for integration connection status: %w", err,
 		))
 	}
@@ -3480,7 +3481,7 @@ func (aH *APIHandler) calculateLogsConnectionStatus(ctx context.Context, orgID v
 		if lastLogResourceAttribs != nil {
 			resourceAttribs, ok := lastLogResourceAttribs.(*map[string]string)
 			if !ok {
-				return nil, model.InternalError(fmt.Errorf(
+				return nil, model.InternalError(sigerrors.Errorf(
 					"could not cast log resource attribs",
 				))
 			}
@@ -3841,13 +3842,13 @@ func (aH *APIHandler) calculateCloudIntegrationServiceConnectionStatus(
 	if cloudProvider != "aws" {
 		// TODO(Raj): Make connection check generic for all providers in a follow up change
 		return nil, model.BadRequest(
-			fmt.Errorf("unsupported cloud provider: %s", cloudProvider),
+			sigerrors.Errorf("unsupported cloud provider: %s", cloudProvider),
 		)
 	}
 
 	telemetryCollectionStrategy := svcDetails.Strategy
 	if telemetryCollectionStrategy == nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"service doesn't have telemetry collection strategy: %s", svcDetails.Id,
 		))
 	}
@@ -4022,7 +4023,7 @@ func (aH *APIHandler) calculateAWSIntegrationSvcLogsConnectionStatus(
 		ctx, orgID, qrParams,
 	)
 	if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"could not query for integration connection status: %w", err,
 		))
 	}
@@ -4328,7 +4329,7 @@ func (aH *APIHandler) autocompleteAggregateAttributes(w http.ResponseWriter, r *
 	case v3.DataSourceMeter:
 		response, err = aH.reader.GetMeterAggregateAttributes(r.Context(), orgID, req)
 	default:
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("invalid data source")}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("invalid data source")}, nil)
 		return
 	}
 
@@ -4350,7 +4351,7 @@ func (aH *APIHandler) getQueryBuilderSuggestions(w http.ResponseWriter, r *http.
 	if req.DataSource != v3.DataSourceLogs {
 		// Support for traces and metrics might come later
 		RespondError(w, model.BadRequest(
-			fmt.Errorf("suggestions not supported for %s", req.DataSource),
+			sigerrors.Errorf("suggestions not supported for %s", req.DataSource),
 		), nil)
 		return
 	}
@@ -4383,7 +4384,7 @@ func (aH *APIHandler) autoCompleteAttributeKeys(w http.ResponseWriter, r *http.R
 	case v3.DataSourceTraces:
 		response, err = aH.reader.GetTraceAttributeKeys(r.Context(), req)
 	default:
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("invalid data source")}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("invalid data source")}, nil)
 		return
 	}
 
@@ -4412,7 +4413,7 @@ func (aH *APIHandler) autoCompleteAttributeValues(w http.ResponseWriter, r *http
 	case v3.DataSourceTraces:
 		response, err = aH.reader.GetTraceAttributeValues(r.Context(), req)
 	default:
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("invalid data source")}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("invalid data source")}, nil)
 		return
 	}
 
@@ -4441,7 +4442,7 @@ func (aH *APIHandler) autoCompleteAttributeValuesPost(w http.ResponseWriter, r *
 	case v3.DataSourceTraces:
 		response, err = aH.reader.GetTraceAttributeValues(r.Context(), req)
 	default:
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("invalid data source")}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("invalid data source")}, nil)
 		return
 	}
 
@@ -4761,7 +4762,7 @@ func (aH *APIHandler) GetQueryProgressUpdates(w http.ResponseWriter, r *http.Req
 
 	c, err := aH.Upgrader.Upgrade(w, r, upgradeResponseHeaders)
 	if err != nil {
-		RespondError(w, model.InternalError(fmt.Errorf(
+		RespondError(w, model.InternalError(sigerrors.Errorf(
 			"couldn't upgrade connection: %w", err,
 		)), nil)
 		return
@@ -5016,7 +5017,7 @@ func (aH *APIHandler) getQueueOverview(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		zap.L().Error(err.Error())
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
@@ -5198,30 +5199,30 @@ func (aH *APIHandler) handleValidateTraces(w http.ResponseWriter, r *http.Reques
 
 	funnel, err := aH.Signoz.Modules.TraceFunnel.Get(r.Context(), valuer.MustNewUUID(funnelID), valuer.MustNewUUID(claims.OrgID))
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: fmt.Errorf("funnel not found: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: sigerrors.Errorf("funnel not found: %v", err)}, nil)
 		return
 	}
 
 	var timeRange traceFunnels.TimeRange
 	if err := json.NewDecoder(r.Body).Decode(&timeRange); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("error decoding time range: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("error decoding time range: %v", err)}, nil)
 		return
 	}
 
 	if len(funnel.Steps) < 2 {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("funnel must have at least 2 steps")}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("funnel must have at least 2 steps")}, nil)
 		return
 	}
 
 	chq, err := traceFunnelsModule.ValidateTraces(funnel, timeRange)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5240,25 +5241,25 @@ func (aH *APIHandler) handleFunnelAnalytics(w http.ResponseWriter, r *http.Reque
 
 	funnel, err := aH.Signoz.Modules.TraceFunnel.Get(r.Context(), valuer.MustNewUUID(funnelID), valuer.MustNewUUID(claims.OrgID))
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: fmt.Errorf("funnel not found: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: sigerrors.Errorf("funnel not found: %v", err)}, nil)
 		return
 	}
 
 	var stepTransition traceFunnels.StepTransitionRequest
 	if err := json.NewDecoder(r.Body).Decode(&stepTransition); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("error decoding time range: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("error decoding time range: %v", err)}, nil)
 		return
 	}
 
 	chq, err := traceFunnelsModule.GetFunnelAnalytics(funnel, stepTransition.TimeRange)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5277,25 +5278,25 @@ func (aH *APIHandler) handleFunnelStepAnalytics(w http.ResponseWriter, r *http.R
 
 	funnel, err := aH.Signoz.Modules.TraceFunnel.Get(r.Context(), valuer.MustNewUUID(funnelID), valuer.MustNewUUID(claims.OrgID))
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: fmt.Errorf("funnel not found: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: sigerrors.Errorf("funnel not found: %v", err)}, nil)
 		return
 	}
 
 	var stepTransition traceFunnels.StepTransitionRequest
 	if err := json.NewDecoder(r.Body).Decode(&stepTransition); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("error decoding time range: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("error decoding time range: %v", err)}, nil)
 		return
 	}
 
 	chq, err := traceFunnelsModule.GetFunnelStepAnalytics(funnel, stepTransition.TimeRange, stepTransition.StepStart, stepTransition.StepEnd)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5314,25 +5315,25 @@ func (aH *APIHandler) handleStepAnalytics(w http.ResponseWriter, r *http.Request
 
 	funnel, err := aH.Signoz.Modules.TraceFunnel.Get(r.Context(), valuer.MustNewUUID(funnelID), valuer.MustNewUUID(claims.OrgID))
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: fmt.Errorf("funnel not found: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: sigerrors.Errorf("funnel not found: %v", err)}, nil)
 		return
 	}
 
 	var timeRange traceFunnels.TimeRange
 	if err := json.NewDecoder(r.Body).Decode(&timeRange); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("error decoding time range: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("error decoding time range: %v", err)}, nil)
 		return
 	}
 
 	chq, err := traceFunnelsModule.GetStepAnalytics(funnel, timeRange)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5351,25 +5352,25 @@ func (aH *APIHandler) handleFunnelSlowTraces(w http.ResponseWriter, r *http.Requ
 
 	funnel, err := aH.Signoz.Modules.TraceFunnel.Get(r.Context(), valuer.MustNewUUID(funnelID), valuer.MustNewUUID(claims.OrgID))
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: fmt.Errorf("funnel not found: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: sigerrors.Errorf("funnel not found: %v", err)}, nil)
 		return
 	}
 
 	var req traceFunnels.StepTransitionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("invalid request body: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("invalid request body: %v", err)}, nil)
 		return
 	}
 
 	chq, err := traceFunnelsModule.GetSlowestTraces(funnel, req.TimeRange, req.StepStart, req.StepEnd)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5388,25 +5389,25 @@ func (aH *APIHandler) handleFunnelErrorTraces(w http.ResponseWriter, r *http.Req
 
 	funnel, err := aH.Signoz.Modules.TraceFunnel.Get(r.Context(), valuer.MustNewUUID(funnelID), valuer.MustNewUUID(claims.OrgID))
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: fmt.Errorf("funnel not found: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorNotFound, Err: sigerrors.Errorf("funnel not found: %v", err)}, nil)
 		return
 	}
 
 	var req traceFunnels.StepTransitionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("invalid request body: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("invalid request body: %v", err)}, nil)
 		return
 	}
 
 	chq, err := traceFunnelsModule.GetErroredTraces(funnel, req.TimeRange, req.StepStart, req.StepEnd)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5415,12 +5416,12 @@ func (aH *APIHandler) handleFunnelErrorTraces(w http.ResponseWriter, r *http.Req
 func (aH *APIHandler) handleValidateTracesWithPayload(w http.ResponseWriter, r *http.Request) {
 	var req traceFunnels.PostableFunnel
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("error decoding request: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("error decoding request: %v", err)}, nil)
 		return
 	}
 
 	if len(req.Steps) < 2 {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("funnel must have at least 2 steps")}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("funnel must have at least 2 steps")}, nil)
 		return
 	}
 
@@ -5434,13 +5435,13 @@ func (aH *APIHandler) handleValidateTracesWithPayload(w http.ResponseWriter, r *
 		EndTime:   req.EndTime,
 	})
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5449,7 +5450,7 @@ func (aH *APIHandler) handleValidateTracesWithPayload(w http.ResponseWriter, r *
 func (aH *APIHandler) handleFunnelAnalyticsWithPayload(w http.ResponseWriter, r *http.Request) {
 	var req traceFunnels.PostableFunnel
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("error decoding request: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("error decoding request: %v", err)}, nil)
 		return
 	}
 
@@ -5462,13 +5463,13 @@ func (aH *APIHandler) handleFunnelAnalyticsWithPayload(w http.ResponseWriter, r 
 		EndTime:   req.EndTime,
 	})
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5477,7 +5478,7 @@ func (aH *APIHandler) handleFunnelAnalyticsWithPayload(w http.ResponseWriter, r 
 func (aH *APIHandler) handleStepAnalyticsWithPayload(w http.ResponseWriter, r *http.Request) {
 	var req traceFunnels.PostableFunnel
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("error decoding request: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("error decoding request: %v", err)}, nil)
 		return
 	}
 
@@ -5490,13 +5491,13 @@ func (aH *APIHandler) handleStepAnalyticsWithPayload(w http.ResponseWriter, r *h
 		EndTime:   req.EndTime,
 	})
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5505,7 +5506,7 @@ func (aH *APIHandler) handleStepAnalyticsWithPayload(w http.ResponseWriter, r *h
 func (aH *APIHandler) handleFunnelStepAnalyticsWithPayload(w http.ResponseWriter, r *http.Request) {
 	var req traceFunnels.PostableFunnel
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("error decoding request: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("error decoding request: %v", err)}, nil)
 		return
 	}
 
@@ -5518,13 +5519,13 @@ func (aH *APIHandler) handleFunnelStepAnalyticsWithPayload(w http.ResponseWriter
 		EndTime:   req.EndTime,
 	}, req.StepStart, req.StepEnd)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5533,7 +5534,7 @@ func (aH *APIHandler) handleFunnelStepAnalyticsWithPayload(w http.ResponseWriter
 func (aH *APIHandler) handleFunnelSlowTracesWithPayload(w http.ResponseWriter, r *http.Request) {
 	var req traceFunnels.PostableFunnel
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("error decoding request: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("error decoding request: %v", err)}, nil)
 		return
 	}
 
@@ -5546,13 +5547,13 @@ func (aH *APIHandler) handleFunnelSlowTracesWithPayload(w http.ResponseWriter, r
 		EndTime:   req.EndTime,
 	}, req.StepStart, req.StepEnd)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)
@@ -5561,7 +5562,7 @@ func (aH *APIHandler) handleFunnelSlowTracesWithPayload(w http.ResponseWriter, r
 func (aH *APIHandler) handleFunnelErrorTracesWithPayload(w http.ResponseWriter, r *http.Request) {
 	var req traceFunnels.PostableFunnel
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("error decoding request: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("error decoding request: %v", err)}, nil)
 		return
 	}
 
@@ -5574,13 +5575,13 @@ func (aH *APIHandler) handleFunnelErrorTracesWithPayload(w http.ResponseWriter, 
 		EndTime:   req.EndTime,
 	}, req.StepStart, req.StepEnd)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error building clickhouse query: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error building clickhouse query: %v", err)}, nil)
 		return
 	}
 
 	results, err := aH.reader.GetListResultV3(r.Context(), chq.Query)
 	if err != nil {
-		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: fmt.Errorf("error converting clickhouse results to list: %v", err)}, nil)
+		RespondError(w, &model.ApiError{Typ: model.ErrorInternal, Err: sigerrors.Errorf("error converting clickhouse results to list: %v", err)}, nil)
 		return
 	}
 	aH.Respond(w, results)

@@ -1,7 +1,6 @@
 package errors
 
 import (
-	"fmt"
 	"regexp"
 )
 
@@ -27,7 +26,7 @@ type Code struct{ s string }
 
 func NewCode(s string) (Code, error) {
 	if !codeRegex.MatchString(s) {
-		return Code{}, fmt.Errorf("invalid code: %v", s)
+		return Code{}, Newf(TypeInternal, CodeInvalidInput, "invalid code: %v", s)
 	}
 
 	return Code{s: s}, nil

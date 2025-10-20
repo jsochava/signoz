@@ -1,7 +1,7 @@
 package queues
 
 import (
-	"fmt"
+	sigerrors "github.com/SigNoz/pkg/errors"
 
 	v3 "github.com/SigNoz/signoz/pkg/query-service/model/v3"
 )
@@ -21,7 +21,7 @@ func (qr *QueueListRequest) Validate() error {
 	}
 
 	if qr.Start < 0 || qr.End < 0 {
-		return fmt.Errorf("start and end must be unixnano time")
+		return sigerrors.Errorf("start and end must be unixnano time")
 	}
 	return nil
 }

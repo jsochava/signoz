@@ -2,10 +2,11 @@ package v2
 
 import (
 	"context"
-	"fmt"
-	"github.com/prometheus/prometheus/promql/parser"
 	"strings"
 	"sync"
+
+	errors "github.com/SigNoz/pkg/errors"
+	"github.com/prometheus/prometheus/promql/parser"
 
 	logsV4 "github.com/SigNoz/signoz/pkg/query-service/app/logs/v4"
 	metricsV3 "github.com/SigNoz/signoz/pkg/query-service/app/metrics/v3"
@@ -30,7 +31,7 @@ func prepareLogsQuery(
 	query := ""
 
 	if params == nil || builderQuery == nil {
-		return query, fmt.Errorf("params and builderQuery cannot be nil")
+		return query, errors.Errorf("params and builderQuery cannot be nil")
 	}
 
 	// for ts query with limit replace it as it is already formed

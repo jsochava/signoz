@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	sigerrors "github.com/SigNoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/types/thirdpartyapitypes"
 	"math"
 	"net/http"
@@ -89,21 +90,21 @@ func parseMetricsTime(s string) (time.Time, error) {
 	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
 		return t, nil
 	}
-	return time.Time{}, fmt.Errorf("cannot parse %q to a valid timestamp", s)
+	return time.Time{}, sigerrors.Errorf("cannot parse %q to a valid timestamp", s)
 }
 
 func parseMetricsDuration(s string) (time.Duration, error) {
 	if d, err := strconv.ParseFloat(s, 64); err == nil {
 		ts := d * float64(time.Second)
 		if ts > float64(math.MaxInt64) || ts < float64(math.MinInt64) {
-			return 0, fmt.Errorf("cannot parse %q to a valid duration. It overflows int64", s)
+			return 0, sigerrors.Errorf("cannot parse %q to a valid duration. It overflows int64", s)
 		}
 		return time.Duration(ts), nil
 	}
 	if d, err := promModel.ParseDuration(s); err == nil {
 		return time.Duration(d), nil
 	}
-	return 0, fmt.Errorf("cannot parse %q to a valid duration", s)
+	return 0, sigerrors.Errorf("cannot parse %q to a valid duration", s)
 }
 
 func parseInstantQueryMetricsRequest(r *http.Request) (*model.InstantQueryMetricsParams, *model.ApiError) {
@@ -298,15 +299,15 @@ func parseListErrorsRequest(r *http.Request) (*model.ListErrorsParams, error) {
 		return nil, err
 	}
 	if postData.Limit == 0 {
-		return nil, fmt.Errorf("limit param cannot be empty from the query")
+		return nil, sigerrors.Errorf("limit param cannot be empty from the query")
 	}
 
 	if len(postData.Order) > 0 && !DoesExistInSlice(postData.Order, allowedOrderDirections) {
-		return nil, fmt.Errorf("given order: %s is not allowed in query", postData.Order)
+		return nil, sigerrors.Errorf("given order: %s is not allowed in query", postData.Order)
 	}
 
 	if len(postData.Order) > 0 && !DoesExistInSlice(postData.OrderParam, allowedOrderParams) {
-		return nil, fmt.Errorf("given orderParam: %s is not allowed in query", postData.OrderParam)
+		return nil, sigerrors.Errorf("given orderParam: %s is not allowed in query", postData.OrderParam)
 	}
 
 	return postData, nil
@@ -342,7 +343,7 @@ func parseGetErrorRequest(r *http.Request) (*model.GetErrorParams, error) {
 	groupID := r.URL.Query().Get("groupID")
 
 	if len(groupID) == 0 {
-		return nil, fmt.Errorf("groupID param cannot be empty from the query")
+		return nil, sigerrors.Errorf("groupID param cannot be empty from the query")
 	}
 	errorID := r.URL.Query().Get("errorID")
 
@@ -358,12 +359,12 @@ func parseGetErrorRequest(r *http.Request) (*model.GetErrorParams, error) {
 func parseTimeStr(timeStr string, param string) (*time.Time, error) {
 
 	if len(timeStr) == 0 {
-		return nil, fmt.Errorf("%s param missing in query", param)
+		return nil, sigerrors.Errorf("%s param missing in query", param)
 	}
 
 	timeUnix, err := strconv.ParseInt(timeStr, 10, 64)
 	if err != nil || len(timeStr) == 0 {
-		return nil, fmt.Errorf("%s param is not in correct timestamp format", param)
+		return nil, sigerrors.Errorf("%s param is not in correct timestamp format", param)
 	}
 
 	timeFmt := time.Unix(0, timeUnix)
@@ -375,12 +376,12 @@ func parseTimeStr(timeStr string, param string) (*time.Time, error) {
 func parseTimeMinusBufferStr(timeStr string, param string) (*time.Time, error) {
 
 	if len(timeStr) == 0 {
-		return nil, fmt.Errorf("%s param missing in query", param)
+		return nil, sigerrors.Errorf("%s param missing in query", param)
 	}
 
 	timeUnix, err := strconv.ParseInt(timeStr, 10, 64)
 	if err != nil || len(timeStr) == 0 {
-		return nil, fmt.Errorf("%s param is not in correct timestamp format", param)
+		return nil, sigerrors.Errorf("%s param is not in correct timestamp format", param)
 	}
 
 	timeUnixNow := time.Now().UnixNano()
@@ -398,12 +399,12 @@ func parseTime(param string, r *http.Request) (*time.Time, error) {
 
 	timeStr := r.URL.Query().Get(param)
 	if len(timeStr) == 0 {
-		return nil, fmt.Errorf("%s param missing in query", param)
+		return nil, sigerrors.Errorf("%s param missing in query", param)
 	}
 
 	timeUnix, err := strconv.ParseInt(timeStr, 10, 64)
 	if err != nil || len(timeStr) == 0 {
-		return nil, fmt.Errorf("%s param is not in correct timestamp format", param)
+		return nil, sigerrors.Errorf("%s param is not in correct timestamp format", param)
 	}
 
 	timeFmt := time.Unix(0, timeUnix)
@@ -421,18 +422,18 @@ func parseTTLParams(r *http.Request) (*model.TTLParams, error) {
 	toColdDuration := r.URL.Query().Get("toColdDuration")
 
 	if len(typeTTL) == 0 || len(delDuration) == 0 {
-		return nil, fmt.Errorf("type and duration param cannot be empty from the query")
+		return nil, sigerrors.Errorf("type and duration param cannot be empty from the query")
 	}
 
 	// Validate the type parameter
 	if typeTTL != baseconstants.TraceTTL && typeTTL != baseconstants.MetricsTTL && typeTTL != baseconstants.LogsTTL {
-		return nil, fmt.Errorf("type param should be metrics|traces|logs, got %v", typeTTL)
+		return nil, sigerrors.Errorf("type param should be metrics|traces|logs, got %v", typeTTL)
 	}
 
 	// Validate the TTL duration.
 	durationParsed, err := time.ParseDuration(delDuration)
 	if err != nil || durationParsed.Seconds() <= 0 {
-		return nil, fmt.Errorf("not a valid TTL duration %v", delDuration)
+		return nil, sigerrors.Errorf("not a valid TTL duration %v", delDuration)
 	}
 
 	var toColdParsed time.Duration
@@ -441,10 +442,10 @@ func parseTTLParams(r *http.Request) (*model.TTLParams, error) {
 	if len(coldStorage) > 0 {
 		toColdParsed, err = time.ParseDuration(toColdDuration)
 		if err != nil || toColdParsed.Seconds() <= 0 {
-			return nil, fmt.Errorf("not a valid toCold TTL duration %v", toColdDuration)
+			return nil, sigerrors.Errorf("not a valid toCold TTL duration %v", toColdDuration)
 		}
 		if toColdParsed.Seconds() != 0 && toColdParsed.Seconds() >= durationParsed.Seconds() {
-			return nil, fmt.Errorf("delete TTL should be greater than cold storage move TTL")
+			return nil, sigerrors.Errorf("delete TTL should be greater than cold storage move TTL")
 		}
 	}
 
@@ -461,11 +462,11 @@ func parseGetTTL(r *http.Request) (*model.GetTTLParams, error) {
 	typeTTL := r.URL.Query().Get("type")
 
 	if len(typeTTL) == 0 {
-		return nil, fmt.Errorf("type param cannot be empty from the query")
+		return nil, sigerrors.Errorf("type param cannot be empty from the query")
 	} else {
 		// Validate the type parameter
 		if typeTTL != baseconstants.TraceTTL && typeTTL != baseconstants.MetricsTTL && typeTTL != baseconstants.LogsTTL {
-			return nil, fmt.Errorf("type param should be metrics|traces|logs, got %v", typeTTL)
+			return nil, sigerrors.Errorf("type param should be metrics|traces|logs, got %v", typeTTL)
 		}
 	}
 
@@ -521,7 +522,7 @@ func parseQBFilterSuggestionsRequest(r *http.Request) (
 			value, err := strconv.Atoi(qpValue)
 
 			if err != nil || value < 1 || value > int(maxValue) {
-				return 0, model.BadRequest(fmt.Errorf(
+				return 0, model.BadRequest(sigerrors.Errorf(
 					"invalid %s: %s", queryParam, qpValue,
 				))
 			}
@@ -553,13 +554,13 @@ func parseQBFilterSuggestionsRequest(r *http.Request) (
 	if len(existingFilterB64) > 0 {
 		decodedFilterJson, err := base64.RawURLEncoding.DecodeString(existingFilterB64)
 		if err != nil {
-			return nil, model.BadRequest(fmt.Errorf("couldn't base64 decode existingFilter: %w", err))
+			return nil, model.BadRequest(sigerrors.Errorf("couldn't base64 decode existingFilter: %w", err))
 		}
 
 		existingFilter = &v3.FilterSet{}
 		err = json.Unmarshal(decodedFilterJson, existingFilter)
 		if err != nil {
-			return nil, model.BadRequest(fmt.Errorf("couldn't JSON decode existingFilter: %w", err))
+			return nil, model.BadRequest(sigerrors.Errorf("couldn't JSON decode existingFilter: %w", err))
 		}
 	}
 
@@ -702,7 +703,7 @@ func validateExpressions(expressions []string, funcs map[string]govaluate.Expres
 	for _, exp := range expressions {
 		evalExp, err := govaluate.NewEvaluableExpressionWithFunctions(exp, funcs)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("invalid expression %s: %v", exp, err))
+			errs = append(errs, sigerrors.Errorf("invalid expression %s: %v", exp, err))
 			continue
 		}
 		for _, v := range evalExp.Vars() {
@@ -714,7 +715,7 @@ func validateExpressions(expressions []string, funcs map[string]govaluate.Expres
 				}
 			}
 			if !hasVariable {
-				errs = append(errs, fmt.Errorf("unknown variable %s", v))
+				errs = append(errs, sigerrors.Errorf("unknown variable %s", v))
 			}
 		}
 	}
@@ -750,7 +751,7 @@ func ParseQueryRangeParams(r *http.Request) (*v3.QueryRangeParamsV3, *model.ApiE
 
 	// parse the request body
 	if err := json.NewDecoder(r.Body).Decode(&queryRangeParams); err != nil {
-		return nil, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("cannot parse the request body: %v", err)}
+		return nil, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("cannot parse the request body: %v", err)}
 	}
 
 	// sanitize the request body
@@ -794,7 +795,7 @@ func ParseQueryRangeParams(r *http.Request) (*v3.QueryRangeParamsV3, *model.ApiE
 							groupKeys[v] = append(groupKeys[v], key.Key)
 						}
 					} else {
-						return nil, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("unknown variable %s", v)}
+						return nil, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("unknown variable %s", v)}
 					}
 				}
 
@@ -809,7 +810,7 @@ func ParseQueryRangeParams(r *http.Request) (*v3.QueryRangeParamsV3, *model.ApiE
 				}
 
 				if !can {
-					return nil, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("cannot join the given group keys")}
+					return nil, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("cannot join the given group keys")}
 				}
 			}
 
@@ -861,7 +862,7 @@ func ParseQueryRangeParams(r *http.Request) (*v3.QueryRangeParamsV3, *model.ApiE
 				if v3.FilterOperator(strings.ToLower((string(item.Operator)))) != v3.FilterOperatorIn && v3.FilterOperator(strings.ToLower((string(item.Operator)))) != v3.FilterOperatorNotIn {
 					// the value type should not be multiple values
 					if _, ok := item.Value.([]interface{}); ok {
-						return nil, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("multiple values %s are not allowed for operator `%s` for key `%s`", item.Value, item.Operator, item.Key.Key)}
+						return nil, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("multiple values %s are not allowed for operator `%s` for key `%s`", item.Value, item.Operator, item.Key.Key)}
 					}
 				}
 			}
@@ -966,7 +967,7 @@ func ParseQueryRangeParams(r *http.Request) (*v3.QueryRangeParamsV3, *model.ApiE
 func ParseKafkaQueueBody(r *http.Request) (*kafka.MessagingQueue, *model.ApiError) {
 	messagingQueue := new(kafka.MessagingQueue)
 	if err := json.NewDecoder(r.Body).Decode(messagingQueue); err != nil {
-		return nil, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("cannot parse the request body: %v", err)}
+		return nil, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("cannot parse the request body: %v", err)}
 	}
 	return messagingQueue, nil
 }
@@ -975,7 +976,7 @@ func ParseKafkaQueueBody(r *http.Request) (*kafka.MessagingQueue, *model.ApiErro
 func ParseQueueBody(r *http.Request) (*queues2.QueueListRequest, *model.ApiError) {
 	queue := new(queues2.QueueListRequest)
 	if err := json.NewDecoder(r.Body).Decode(queue); err != nil {
-		return nil, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("cannot parse the request body: %v", err)}
+		return nil, &model.ApiError{Typ: model.ErrorBadData, Err: sigerrors.Errorf("cannot parse the request body: %v", err)}
 	}
 	return queue, nil
 }

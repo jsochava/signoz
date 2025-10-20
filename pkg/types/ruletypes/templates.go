@@ -290,7 +290,9 @@ func (te TemplateExpander) Expand() (result string, resultErr error) {
 			var ok bool
 			resultErr, ok = r.(error)
 			if !ok {
-				resultErr = fmt.Errorf("panic expanding template %v: %v", te.name, r)
+				resultErr = errors.Newf(errors.TypeInternal, errors.CodeInternal, "panic expanding template %v: %v", te.name, r)
+			} else {
+				resultErr = errors.Newf(errors.TypeInternal, errors.CodeInternal, "panic expanding template %v: %v", te.name, r)
 			}
 		}
 	}()
@@ -299,12 +301,12 @@ func (te TemplateExpander) Expand() (result string, resultErr error) {
 
 	tmpl, err := text_template.New(te.name).Funcs(te.funcMap).Option("missingkey=zero").Parse(te.text)
 	if err != nil {
-		return "", fmt.Errorf("error parsing template %v: %v", te.name, err)
+		return "", errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "error parsing template %v: %v", te.name, err)
 	}
 	var buffer bytes.Buffer
 	err = tmpl.Execute(&buffer, te.data)
 	if err != nil {
-		return "", fmt.Errorf("error executing template %v: %v", te.name, err)
+		return "", errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "error executing template %v: %v", te.name, err)
 	}
 	return buffer.String(), nil
 }
@@ -316,7 +318,9 @@ func (te TemplateExpander) ExpandHTML(templateFiles []string) (result string, re
 			var ok bool
 			resultErr, ok = r.(error)
 			if !ok {
-				resultErr = fmt.Errorf("panic expanding template %v: %v", te.name, r)
+				resultErr = errors.Newf(errors.TypeInternal, errors.CodeInternal, "panic expanding template %v: %v", te.name, r)
+			} else {
+				resultErr = errors.Newf(errors.TypeInternal, errors.CodeInternal, "panic expanding template %v: %v", te.name, r)
 			}
 		}
 	}()
@@ -332,18 +336,18 @@ func (te TemplateExpander) ExpandHTML(templateFiles []string) (result string, re
 	})
 	tmpl, err := tmpl.Parse(te.text)
 	if err != nil {
-		return "", fmt.Errorf("error parsing template %v: %v", te.name, err)
+		return "", errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "error parsing template %v: %v", te.name, err)
 	}
 	if len(templateFiles) > 0 {
 		_, err = tmpl.ParseFiles(templateFiles...)
 		if err != nil {
-			return "", fmt.Errorf("error parsing template files for %v: %v", te.name, err)
+			return "", errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "error parsing template files for %v: %v", te.name, err)
 		}
 	}
 	var buffer bytes.Buffer
 	err = tmpl.Execute(&buffer, te.data)
 	if err != nil {
-		return "", fmt.Errorf("error executing template %v: %v", te.name, err)
+		return "", errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "error executing template %v: %v", te.name, err)
 	}
 	return buffer.String(), nil
 }

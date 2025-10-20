@@ -15,8 +15,9 @@ import (
 	"github.com/SigNoz/signoz/pkg/sqlstore"
 	"github.com/SigNoz/signoz/pkg/types/opamptypes"
 	"github.com/SigNoz/signoz/pkg/valuer"
+	sigerrors "github.com/SigNoz/pkg/errors"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 	"go.uber.org/zap"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -105,12 +106,12 @@ func (m *Manager) RecommendAgentConfig(orgId valuer.UUID, currentConfYaml []byte
 		featureType := opamptypes.NewElementType(string(feature.AgentFeatureType()))
 		latestConfig, apiErr := GetLatestVersion(context.Background(), orgId, featureType)
 		if apiErr != nil && apiErr.Type() != model.ErrorNotFound {
-			return nil, "", errors.Wrap(apiErr.ToError(), "failed to get latest agent config version")
+			return nil, "", pkgerrors.Wrap(apiErr.ToError(), "failed to get latest agent config version")
 		}
 
 		updatedConf, serializedSettingsUsed, apiErr := feature.RecommendAgentConfig(orgId, recommendation, latestConfig)
 		if apiErr != nil {
-			return nil, "", errors.Wrap(apiErr.ToError(), fmt.Sprintf(
+			return nil, "", pkgerrors.Wrap(apiErr.ToError(), fmt.Sprintf(
 				"failed to generate agent config recommendation for %s", featureType,
 			))
 		}
@@ -227,14 +228,14 @@ func Redeploy(ctx context.Context, orgId valuer.UUID, typ opamptypes.ElementType
 
 	if configVersion == nil || (configVersion != nil && configVersion.Config == "") {
 		zap.L().Debug("config version has no conf yaml", zap.Any("configVersion", configVersion))
-		return model.BadRequest(fmt.Errorf("the config version can not be redeployed"))
+		return model.BadRequest(sigerrors.Errorf("the config version can not be redeployed"))
 	}
 	switch typ {
 	case opamptypes.ElementTypeSamplingRules:
 		var config *tsp.Config
 		if err := yaml.Unmarshal([]byte(configVersion.Config), &config); err != nil {
 			zap.L().Debug("failed to read last conf correctly", zap.Error(err))
-			return model.BadRequest(fmt.Errorf("failed to read the stored config correctly"))
+			return model.BadRequest(sigerrors.Errorf("failed to read the stored config correctly"))
 		}
 
 		// merge current config with new filter params
@@ -246,7 +247,7 @@ func Redeploy(ctx context.Context, orgId valuer.UUID, typ opamptypes.ElementType
 		configHash, err := opamp.UpsertControlProcessors(ctx, "traces", processorConf, m.OnConfigUpdate)
 		if err != nil {
 			zap.L().Error("failed to call agent config update for trace processor", zap.Error(err))
-			return model.InternalError(fmt.Errorf("failed to deploy the config"))
+			return model.InternalError(sigerrors.Errorf("failed to deploy the config"))
 		}
 
 		m.updateDeployStatus(ctx, orgId, opamptypes.ElementTypeSamplingRules, version, opamptypes.DeployInitiated.StringValue(), "Deployment started", configHash, configVersion.Config)
@@ -254,7 +255,7 @@ func Redeploy(ctx context.Context, orgId valuer.UUID, typ opamptypes.ElementType
 		var filterConfig *filterprocessor.Config
 		if err := yaml.Unmarshal([]byte(configVersion.Config), &filterConfig); err != nil {
 			zap.L().Error("failed to read last conf correctly", zap.Error(err))
-			return model.InternalError(fmt.Errorf("failed to read the stored config correctly"))
+			return model.InternalError(sigerrors.Errorf("failed to read the stored config correctly"))
 		}
 		processorConf := map[string]interface{}{
 			"filter": filterConfig,
@@ -276,11 +277,10 @@ func Redeploy(ctx context.Context, orgId valuer.UUID, typ opamptypes.ElementType
 // UpsertFilterProcessor updates the agent config with new filter processor params
 func UpsertFilterProcessor(ctx context.Context, orgId valuer.UUID, version int, config *filterprocessor.Config) error {
 	if !atomic.CompareAndSwapUint32(&m.lock, 0, 1) {
-		return fmt.Errorf("agent updater is busy")
+		return sigerrors.Errorf("agent updater is busy")
 	}
 	defer atomic.StoreUint32(&m.lock, 0)
 
-	// merge current config with new filter params
 	// merge current config with new filter params
 	processorConf := map[string]interface{}{
 		"filter": config,
@@ -328,7 +328,7 @@ func (m *Manager) OnConfigUpdate(orgId valuer.UUID, agentId string, hash string,
 // UpsertSamplingProcessor updates the agent config with new filter processor params
 func UpsertSamplingProcessor(ctx context.Context, orgId valuer.UUID, version int, config *tsp.Config) error {
 	if !atomic.CompareAndSwapUint32(&m.lock, 0, 1) {
-		return fmt.Errorf("agent updater is busy")
+		return sigerrors.Errorf("agent updater is busy")
 	}
 	defer atomic.StoreUint32(&m.lock, 0)
 

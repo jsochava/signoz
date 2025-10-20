@@ -5,6 +5,7 @@ import (
 	"math"
 	"strings"
 
+	errors "github.com/SigNoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/query-service/app/metrics/v4/helpers"
 	"github.com/SigNoz/signoz/pkg/query-service/constants"
 	v3 "github.com/SigNoz/signoz/pkg/query-service/model/v3"
@@ -99,7 +100,7 @@ func buildMetricQueryForTable(start, end, _ int64, mq *v3.BuilderQuery) (string,
 
 	switch mq.AggregateOperator {
 	case v3.AggregateOperatorRate:
-		return "", fmt.Errorf("rate is not supported for table view")
+		return "", errors.Errorf("rate is not supported for table view")
 	case v3.AggregateOperatorSumRate, v3.AggregateOperatorAvgRate, v3.AggregateOperatorMaxRate, v3.AggregateOperatorMinRate:
 		rateGroupBy := "fingerprint, " + groupBy
 		rateGroupTags := "fingerprint, " + groupTags
@@ -179,8 +180,8 @@ func buildMetricQueryForTable(start, end, _ int64, mq *v3.BuilderQuery) (string,
 		query := fmt.Sprintf(queryTmpl, groupTags, op, filterSubQuery, groupBy, orderBy)
 		return query, nil
 	case v3.AggregateOperatorNoOp:
-		return "", fmt.Errorf("noop is not supported for table view")
+		return "", errors.Errorf("noop is not supported for table view")
 	default:
-		return "", fmt.Errorf("unsupported aggregate operator")
+		return "", errors.Errorf("unsupported aggregate operator")
 	}
 }

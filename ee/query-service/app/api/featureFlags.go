@@ -2,14 +2,12 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
 
 	"github.com/SigNoz/signoz/ee/query-service/constants"
-	pkgError "github.com/SigNoz/signoz/pkg/errors"
+	"github.com/SigNoz/signoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/http/render"
 	"github.com/SigNoz/signoz/pkg/types/authtypes"
 	"github.com/SigNoz/signoz/pkg/types/licensetypes"
@@ -27,7 +25,7 @@ func (ah *APIHandler) getFeatureFlags(w http.ResponseWriter, r *http.Request) {
 
 	orgID, err := valuer.NewUUID(claims.OrgID)
 	if err != nil {
-		render.Error(w, pkgError.Newf(pkgError.TypeInvalidInput, pkgError.CodeInvalidInput, "orgId is invalid"))
+		render.Error(w, errors.NewInvalidInputf(errors.CodeInvalidInput, "orgId is invalid"))
 		return
 	}
 
@@ -83,12 +81,12 @@ func (ah *APIHandler) getFeatureFlags(w http.ResponseWriter, r *http.Request) {
 func fetchZeusFeatures(url, licenseKey string) ([]*licensetypes.Feature, error) {
 	// Check if the URL is empty
 	if url == "" {
-		return nil, fmt.Errorf("url is empty")
+		return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "url is empty")
 	}
 
 	// Check if the licenseKey is empty
 	if licenseKey == "" {
-		return nil, fmt.Errorf("licenseKey is empty")
+		return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "licenseKey is empty")
 	}
 
 	// Creating an HTTP client with a timeout for better control
@@ -98,7 +96,7 @@ func fetchZeusFeatures(url, licenseKey string) ([]*licensetypes.Feature, error) 
 	// Creating a new GET request
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "failed to create request")
 	}
 
 	// Setting the custom header
@@ -107,7 +105,7 @@ func fetchZeusFeatures(url, licenseKey string) ([]*licensetypes.Feature, error) 
 	// Making the GET request
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make GET request: %w", err)
+		return nil, errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "failed to make GET request")
 	}
 	defer func() {
 		if resp != nil {
@@ -117,22 +115,22 @@ func fetchZeusFeatures(url, licenseKey string) ([]*licensetypes.Feature, error) 
 
 	// Check for non-OK status code
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%w: %d %s", errors.New("received non-OK HTTP status code"), resp.StatusCode, http.StatusText(resp.StatusCode))
+		return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "received non-OK HTTP status code: %d %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 
 	// Reading and decoding the response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "failed to read response body")
 	}
 
 	var zeusResponse ZeusFeaturesResponse
 	if err := json.Unmarshal(body, &zeusResponse); err != nil {
-		return nil, fmt.Errorf("%w: %v", errors.New("failed to decode response body"), err)
+		return nil, errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "failed to decode response body")
 	}
 
 	if zeusResponse.Status != "success" {
-		return nil, fmt.Errorf("%w: %s", errors.New("failed to fetch zeus features"), zeusResponse.Status)
+		return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "failed to fetch zeus features: %s", zeusResponse.Status)
 	}
 
 	return zeusResponse.Data, nil

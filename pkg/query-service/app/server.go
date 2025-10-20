@@ -41,6 +41,7 @@ import (
 	"github.com/SigNoz/signoz/pkg/query-service/interfaces"
 	"github.com/SigNoz/signoz/pkg/query-service/rules"
 	"github.com/SigNoz/signoz/pkg/query-service/utils"
+	sigerrors "github.com/SigNoz/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -223,7 +224,7 @@ func (s *Server) initListeners() error {
 	var err error
 	publicHostPort := s.httpHostPort
 	if publicHostPort == "" {
-		return fmt.Errorf("constants.HTTPHostPort is required")
+		return sigerrors.Errorf("constants.HTTPHostPort is required")
 	}
 
 	s.httpConn, err = net.Listen("tcp", publicHostPort)
@@ -333,7 +334,7 @@ func makeRulesManager(
 	// create Manager
 	manager, err := rules.NewManager(managerOpts)
 	if err != nil {
-		return nil, fmt.Errorf("rule manager error: %v", err)
+		return nil, sigerrors.Errorf("rule manager error: %v", err)
 	}
 
 	zap.L().Info("rules manager is ready")

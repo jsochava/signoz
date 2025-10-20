@@ -153,7 +153,7 @@ func (qb *QueryBuilder) PrepareLiveTailQuery(params *v3.QueryRangeParamsV3) (str
 	compositeQuery := params.CompositeQuery
 
 	if compositeQuery != nil {
-		// There can only be a signle query and there is no concept of disabling queries
+		// There can only be a single query and there is no concept of disabling queries
 		if len(compositeQuery.BuilderQueries) != 1 {
 			return "", fmt.Errorf("live tail is only supported for single query")
 		}
@@ -178,7 +178,7 @@ func (qb *QueryBuilder) PrepareQueries(params *v3.QueryRangeParamsV3) (map[strin
 	if compositeQuery != nil {
 		// Build queries for each builder query
 		for queryName, query := range compositeQuery.BuilderQueries {
-			// making a local clone since we should not update the global params if there is sift by
+			// making a local clone since we should not update the global params if there is shift by
 			start := params.Start
 			end := params.End
 			if query.ShiftBy != 0 {
@@ -200,7 +200,8 @@ func (qb *QueryBuilder) PrepareQueries(params *v3.QueryRangeParamsV3) (map[strin
 						if err != nil {
 							return nil, err
 						}
-						query := fmt.Sprintf(placeholderQuery, limitQuery)
+						// FIX: replace placeholder token with the limit subquery
+						query := strings.Replace(placeholderQuery, "#LIMIT_PLACEHOLDER", limitQuery, 1)
 						queries[queryName] = query
 					} else {
 						queryString, err := qb.options.BuildTraceQuery(start, end, compositeQuery.PanelType,
@@ -221,7 +222,8 @@ func (qb *QueryBuilder) PrepareQueries(params *v3.QueryRangeParamsV3) (map[strin
 						if err != nil {
 							return nil, err
 						}
-						query := fmt.Sprintf(placeholderQuery, limitQuery)
+						// FIX: replace placeholder token with the limit subquery
+						query := strings.Replace(placeholderQuery, "#LIMIT_PLACEHOLDER", limitQuery, 1)
 						queries[queryName] = query
 					} else {
 						queryString, err := qb.options.BuildLogQuery(start, end, compositeQuery.QueryType, compositeQuery.PanelType, query, v3.QBOptions{GraphLimitQtype: ""})

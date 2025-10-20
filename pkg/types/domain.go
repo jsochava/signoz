@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"strings"
 
+	errors "github.com/SigNoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/types/ssotypes"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	saml2 "github.com/russellhaering/gosaml2"
 	"github.com/uptrace/bun"
 )
@@ -55,7 +55,7 @@ func (od *GettableOrgDomain) Valid(err error) error {
 	}
 
 	if od.ID == uuid.Nil || od.OrgID == "" {
-		return fmt.Errorf("both id and orgId are required")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "both id and orgId are required")
 	}
 
 	return nil
@@ -65,11 +65,11 @@ func (od *GettableOrgDomain) Valid(err error) error {
 func (od *GettableOrgDomain) ValidNew() error {
 
 	if od.OrgID == "" {
-		return fmt.Errorf("orgId is required")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "orgId is required")
 	}
 
 	if od.Name == "" {
-		return fmt.Errorf("name is required")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "name is required")
 	}
 
 	return nil
@@ -111,7 +111,7 @@ func (od *GettableOrgDomain) GetSAMLCert() string {
 // requesting OAuth and also used in processing response from google
 func (od *GettableOrgDomain) PrepareGoogleOAuthProvider(siteUrl *url.URL) (ssotypes.OAuthCallbackProvider, error) {
 	if od.GoogleAuthConfig == nil {
-		return nil, fmt.Errorf("GOOGLE OAUTH is not setup correctly for this domain")
+		return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "GOOGLE OAUTH is not setup correctly for this domain")
 	}
 
 	return od.GoogleAuthConfig.GetProvider(od.Name, siteUrl)
@@ -181,7 +181,7 @@ func (od *GettableOrgDomain) BuildSsoUrl(siteUrl *url.URL) (ssoUrl string, err e
 		return googleProvider.BuildAuthURL(relayState)
 
 	default:
-		return "", fmt.Errorf("unsupported SSO config for the domain")
+		return "", errors.NewInvalidInputf(errors.CodeInvalidInput, "unsupported SSO config for the domain")
 	}
 
 }

@@ -2,7 +2,8 @@ package integrations
 
 import (
 	"context"
-	"fmt"
+
+	sigerrors "github.com/SigNoz/pkg/errors"
 
 	"github.com/SigNoz/signoz/pkg/query-service/model"
 	"github.com/SigNoz/signoz/pkg/sqlstore"
@@ -35,7 +36,7 @@ func (r *InstalledIntegrationsSqliteRepo) list(
 		Order("installed_at").
 		Scan(ctx)
 	if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"could not query installed integrations: %w", err,
 		))
 	}
@@ -57,7 +58,7 @@ func (r *InstalledIntegrationsSqliteRepo) get(
 		Where("type IN (?)", bun.In(typeValues)).
 		Scan(ctx)
 	if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"could not query installed integrations: %w", err,
 		))
 	}
@@ -93,7 +94,7 @@ func (r *InstalledIntegrationsSqliteRepo) upsert(
 		Exec(ctx)
 
 	if dbErr != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"could not insert record for integration installation: %w", dbErr,
 		))
 	}
@@ -120,7 +121,7 @@ func (r *InstalledIntegrationsSqliteRepo) delete(
 		Exec(ctx)
 
 	if dbErr != nil {
-		return model.InternalError(fmt.Errorf(
+		return model.InternalError(sigerrors.Errorf(
 			"could not delete installed integration record for %s: %w",
 			integrationType, dbErr,
 		))

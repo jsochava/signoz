@@ -3,7 +3,6 @@ package model
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"fmt"
 
 	v3 "github.com/SigNoz/signoz/pkg/query-service/model/v3"
 	"github.com/pkg/errors"
@@ -149,13 +148,13 @@ type QueryRuleStateHistory struct {
 
 func (r *QueryRuleStateHistory) Validate() error {
 	if r.Start == 0 || r.End == 0 {
-		return fmt.Errorf("start and end are required")
+		return errors.Errorf("start and end are required")
 	}
 	if r.Offset < 0 || r.Limit < 0 {
-		return fmt.Errorf("offset and limit must be greater than 0")
+		return errors.Errorf("offset and limit must be greater than 0")
 	}
 	if r.Order != "asc" && r.Order != "desc" {
-		return fmt.Errorf("order must be asc or desc")
+		return errors.Errorf("order must be asc or desc")
 	}
 	return nil
 }

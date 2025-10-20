@@ -3,9 +3,9 @@ package cloudintegrations
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
+	sigerrors "github.com/SigNoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/query-service/model"
 	"github.com/SigNoz/signoz/pkg/sqlstore"
 	"github.com/SigNoz/signoz/pkg/types"
@@ -69,12 +69,12 @@ func (r *serviceConfigSQLRepository) get(
 		Scan(ctx)
 
 	if err == sql.ErrNoRows {
-		return nil, model.NotFoundError(fmt.Errorf(
+		return nil, model.NotFoundError(sigerrors.Errorf(
 			"couldn't find config for cloud account %s",
 			cloudAccountId,
 		))
 	} else if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"couldn't query cloud service config: %w", err,
 		))
 	}
@@ -106,7 +106,7 @@ func (r *serviceConfigSQLRepository) upsert(
 		Scan(ctx, &cloudIntegrationId)
 
 	if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"couldn't query cloud integration id: %w", err,
 		))
 	}
@@ -126,7 +126,7 @@ func (r *serviceConfigSQLRepository) upsert(
 		On("conflict(cloud_integration_id, type) do update set config=excluded.config, updated_at=excluded.updated_at").
 		Exec(ctx)
 	if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"could not upsert cloud service config: %w", err,
 		))
 	}
@@ -149,7 +149,7 @@ func (r *serviceConfigSQLRepository) getAllForAccount(
 		Where("ci.org_id = ?", orgID).
 		Scan(ctx)
 	if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"could not query service configs from db: %w", err,
 		))
 	}

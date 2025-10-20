@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"runtime/debug"
 
 	anomalyV2 "github.com/SigNoz/signoz/ee/anomaly"
 	"github.com/SigNoz/signoz/ee/query-service/anomaly"
-	"github.com/SigNoz/signoz/pkg/errors"
+	errors "github.com/SigNoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/http/render"
 	baseapp "github.com/SigNoz/signoz/pkg/query-service/app"
 	"github.com/SigNoz/signoz/pkg/query-service/app/queryBuilder"
@@ -78,7 +77,7 @@ func (aH *APIHandler) queryRangeV4(w http.ResponseWriter, r *http.Request) {
 			// checking if the expression is the same as the query name. if the expression is different
 			// then it is a formula. otherwise, it is simple builder query.
 			if query.DataSource != v3.DataSourceMetrics && query.QueryName == query.Expression {
-				RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: fmt.Errorf("all queries must have metric data source")}, nil)
+				RespondError(w, &model.ApiError{Typ: model.ErrorBadData, Err: errors.Errorf("all queries must have metric data source")}, nil)
 				return
 			}
 		}

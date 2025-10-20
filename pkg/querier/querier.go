@@ -140,7 +140,7 @@ func (q *querier) QueryRange(ctx context.Context, orgID valuer.UUID, req *qbtype
 			if spec, ok := query.Spec.(qbtypes.QueryBuilderTraceOperator); ok {
 				// Parse expression to find dependencies
 				if err := spec.ParseExpression(); err != nil {
-					return nil, fmt.Errorf("failed to parse trace operator expression: %w", err)
+					return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "failed to parse trace operator expression: %v", err)
 				}
 
 				deps := spec.CollectReferencedQueries(spec.ParsedExpression)
@@ -652,7 +652,7 @@ func (q *querier) executeWithCache(ctx context.Context, orgID valuer.UUID, query
 
 	// Execute queries for missing ranges with bounded parallelism
 	freshResults := make([]*qbtypes.Result, len(missingRanges))
-	errors := make([]error, len(missingRanges))
+	errorsArr := make([]error, len(missingRanges))
 	totalStats := qbtypes.ExecStats{}
 
 	q.logger.DebugContext(ctx, "executing queries for missing ranges",
@@ -673,14 +673,14 @@ func (q *querier) executeWithCache(ctx context.Context, orgID valuer.UUID, query
 			// Create a new query with the missing time range
 			rangedQuery := q.createRangedQuery(query, *tr)
 			if rangedQuery == nil {
-				errors[idx] = fmt.Errorf("failed to create ranged query for range %d-%d", tr.From, tr.To)
+				errorsArr[idx] = errors.NewInternalf(errors.CodeInternal, "failed to create ranged query for range %d-%d", tr.From, tr.To)
 				return
 			}
 
 			// Execute the ranged query
 			result, err := rangedQuery.Execute(ctx)
 			if err != nil {
-				errors[idx] = err
+				errorsArr[idx] = err
 				return
 			}
 
@@ -692,7 +692,7 @@ func (q *querier) executeWithCache(ctx context.Context, orgID valuer.UUID, query
 	wg.Wait()
 
 	// Check for errors
-	for _, err := range errors {
+	for _, err := range errorsArr {
 		if err != nil {
 			// If any query failed, fall back to full execution
 			q.logger.ErrorContext(ctx, "parallel query execution failed", "error", err)

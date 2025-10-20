@@ -199,7 +199,7 @@ func defaultPrepareTaskFunc(opts PrepareTaskOptions) (Task, error) {
 		task = newTask(TaskTypeProm, opts.TaskName, taskNamesuffix, time.Duration(evaluation.GetFrequency()), rules, opts.ManagerOpts, opts.NotifyFunc, opts.MaintenanceStore, opts.OrgID)
 
 	} else {
-		return nil, fmt.Errorf("unsupported rule type %s. Supported types: %s, %s", opts.Rule.RuleType, ruletypes.RuleTypeProm, ruletypes.RuleTypeThreshold)
+		return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "unsupported rule type %s. Supported types: %s, %s", opts.Rule.RuleType, ruletypes.RuleTypeProm, ruletypes.RuleTypeThreshold)
 	}
 
 	return task, nil
@@ -450,7 +450,7 @@ func (m *Manager) DeleteRule(ctx context.Context, idStr string) error {
 	id, err := valuer.NewUUID(idStr)
 	if err != nil {
 		zap.L().Error("delete rule received an rule id in invalid format, must be a valid uuid-v7", zap.String("id", idStr), zap.Error(err))
-		return fmt.Errorf("delete rule received an rule id in invalid format, must be a valid uuid-v7")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "delete rule received an rule id in invalid format, must be a valid uuid-v7")
 	}
 
 	claims, err := authtypes.ClaimsFromContext(ctx)
@@ -634,7 +634,7 @@ func (m *Manager) addTask(_ context.Context, orgID valuer.UUID, rule *ruletypes.
 	// If there is an another task with the same identifier, raise an error
 	_, ok := m.tasks[taskName]
 	if ok {
-		return fmt.Errorf("a rule with the same name already exists")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "a rule with the same name already exists")
 	}
 
 	go func() {

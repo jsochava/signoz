@@ -4,7 +4,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"fmt"
 	"strings"
 
 	"github.com/SigNoz/signoz/pkg/errors"
@@ -57,7 +56,7 @@ func LoadCertFromPem(certString string) (dsig.X509CertificateStore, error) {
 func PrepareRequest(issuer, acsUrl, audience, entity, idp, certString string) (*saml2.SAMLServiceProvider, error) {
 	var certStore dsig.X509CertificateStore
 	if certString == "" {
-		return nil, fmt.Errorf("invalid certificate data")
+		return nil, errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "invalid certificate data")
 	}
 
 	var err error

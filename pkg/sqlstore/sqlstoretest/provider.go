@@ -3,7 +3,6 @@ package sqlstoretest
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/SigNoz/signoz/pkg/errors"
@@ -30,12 +29,13 @@ func New(config sqlstore.Config, matcher sqlmock.QueryMatcher) *Provider {
 
 	var bunDB *bun.DB
 
-	if config.Provider == "sqlite" {
+	switch config.Provider {
+	case "sqlite":
 		bunDB = bun.NewDB(db, sqlitedialect.New())
-	} else if config.Provider == "postgres" {
+	case "postgres":
 		bunDB = bun.NewDB(db, pgdialect.New())
-	} else {
-		panic(fmt.Errorf("provider %q is not supported", config.Provider))
+	default:
+		panic(errors.Newf(errors.TypeInvalidInput, errors.CodeInvalidInput, "provider %q is not supported", config.Provider))
 	}
 
 	return &Provider{
@@ -67,13 +67,16 @@ func (provider *Provider) BunDBCtx(ctx context.Context) bun.IDB {
 }
 
 func (provider *Provider) RunInTxCtx(ctx context.Context, opts *sql.TxOptions, cb func(ctx context.Context) error) error {
+	// In tests we skip opening a real transaction; just execute the callback.
 	return cb(ctx)
 }
 
 func (provider *Provider) WrapNotFoundErrf(err error, code errors.Code, format string, args ...any) error {
-	return fmt.Errorf(format, args...)
+	// Provide a consistent error shape for “not found” in tests.
+	return errors.Newf(errors.TypeNotFound, code, format, args...)
 }
 
 func (provider *Provider) WrapAlreadyExistsErrf(err error, code errors.Code, format string, args ...any) error {
-	return fmt.Errorf(format, args...)
+	// Provide a consistent error shape for “already exists” in tests.
+	return errors.Newf(errors.TypeAlreadyExists, code, format, args...)
 }

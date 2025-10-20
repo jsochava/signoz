@@ -15,6 +15,7 @@ import (
 	"io/fs"
 	"path"
 
+	sigerrors "github.com/SigNoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/query-service/model"
 	koanfJson "github.com/knadh/koanf/parsers/json"
 	"golang.org/x/exp/maps"
@@ -56,7 +57,7 @@ var integrationFiles embed.FS
 func init() {
 	err := readBuiltIns()
 	if err != nil {
-		panic(fmt.Errorf("couldn't read builtin integrations: %w", err))
+		panic(sigerrors.Errorf("couldn't read builtin integrations: %w", err))
 	}
 }
 
@@ -64,7 +65,7 @@ func readBuiltIns() error {
 	rootDirName := "builtin_integrations"
 	builtinDirs, err := fs.ReadDir(integrationFiles, rootDirName)
 	if err != nil {
-		return fmt.Errorf("couldn't list integrations dirs: %w", err)
+		return sigerrors.Errorf("couldn't list integrations dirs: %w", err)
 	}
 
 	builtInIntegrations = map[string]IntegrationDetails{}
@@ -76,12 +77,12 @@ func readBuiltIns() error {
 		integrationDir := path.Join(rootDirName, d.Name())
 		i, err := readBuiltInIntegration(integrationDir)
 		if err != nil {
-			return fmt.Errorf("couldn't parse integration %s from files: %w", d.Name(), err)
+			return sigerrors.Errorf("couldn't parse integration %s from files: %w", d.Name(), err)
 		}
 
 		_, exists := builtInIntegrations[i.Id]
 		if exists {
-			return fmt.Errorf(
+			return sigerrors.Errorf(
 				"duplicate integration for id %s at %s", i.Id, d.Name(),
 			)
 		}
@@ -97,19 +98,19 @@ func readBuiltInIntegration(dirpath string) (
 
 	serializedSpec, err := integrationFiles.ReadFile(integrationJsonPath)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't find integration.json in %s: %w", dirpath, err)
+		return nil, sigerrors.Errorf("couldn't find integration.json in %s: %w", dirpath, err)
 	}
 
 	integrationSpec, err := koanfJson.Parser().Unmarshal(serializedSpec)
 	if err != nil {
-		return nil, fmt.Errorf(
+		return nil, sigerrors.Errorf(
 			"couldn't parse integration json from %s: %w", integrationJsonPath, err,
 		)
 	}
 
 	hydrated, err := HydrateFileUris(integrationSpec, integrationFiles, dirpath)
 	if err != nil {
-		return nil, fmt.Errorf(
+		return nil, sigerrors.Errorf(
 			"couldn't hydrate files referenced in integration %s: %w", integrationJsonPath, err,
 		)
 	}
@@ -117,7 +118,7 @@ func readBuiltInIntegration(dirpath string) (
 	hydratedSpec := hydrated.(map[string]interface{})
 	hydratedSpecJson, err := koanfJson.Parser().Marshal(hydratedSpec)
 	if err != nil {
-		return nil, fmt.Errorf(
+		return nil, sigerrors.Errorf(
 			"couldn't serialize hydrated integration spec back to JSON %s: %w", integrationJsonPath, err,
 		)
 	}
@@ -127,7 +128,7 @@ func readBuiltInIntegration(dirpath string) (
 	decoder.DisallowUnknownFields()
 	err = decoder.Decode(&integration)
 	if err != nil {
-		return nil, fmt.Errorf(
+		return nil, sigerrors.Errorf(
 			"couldn't parse hydrated JSON spec read from %s: %w",
 			integrationJsonPath, err,
 		)
@@ -135,7 +136,7 @@ func readBuiltInIntegration(dirpath string) (
 
 	err = validateIntegration(integration)
 	if err != nil {
-		return nil, fmt.Errorf("invalid integration spec %s: %w", integration.Id, err)
+		return nil, sigerrors.Errorf("invalid integration spec %s: %w", integration.Id, err)
 	}
 
 	integration.Id = "builtin-" + integration.Id
@@ -157,14 +158,14 @@ func validateIntegration(i IntegrationDetails) error {
 	for _, dd := range i.Assets.Dashboards {
 		did, exists := dd["id"]
 		if !exists {
-			return fmt.Errorf("id is required. not specified in dashboard titled %v", dd["title"])
+			return sigerrors.Errorf("id is required. not specified in dashboard titled %v", dd["title"])
 		}
 		dashboardId, ok := did.(string)
 		if !ok {
-			return fmt.Errorf("id must be string in dashboard titled %v", dd["title"])
+			return sigerrors.Errorf("id must be string in dashboard titled %v", dd["title"])
 		}
 		if _, seen := seenDashboardIds[dashboardId]; seen {
-			return fmt.Errorf("multiple dashboards found with id %s", dashboardId)
+			return sigerrors.Errorf("multiple dashboards found with id %s", dashboardId)
 		}
 		seenDashboardIds[dashboardId] = nil
 	}
@@ -236,7 +237,7 @@ func readFileIfUri(fs embed.FS, maybeFileUri string, basedir string) (interface{
 
 	fileContents, err := fs.ReadFile(fullPath)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't read referenced file: %w", err)
+		return nil, sigerrors.Errorf("couldn't read referenced file: %w", err)
 	}
 	if strings.HasSuffix(maybeFileUri, ".md") {
 		return string(fileContents), nil
@@ -244,7 +245,7 @@ func readFileIfUri(fs embed.FS, maybeFileUri string, basedir string) (interface{
 	} else if strings.HasSuffix(maybeFileUri, ".json") {
 		parsed, err := koanfJson.Parser().Unmarshal(fileContents)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't parse referenced JSON file: %w", err)
+			return nil, sigerrors.Errorf("couldn't parse referenced JSON file: %w", err)
 		}
 		return parsed, nil
 
@@ -265,7 +266,7 @@ func readFileIfUri(fs embed.FS, maybeFileUri string, basedir string) (interface{
 
 	}
 
-	return nil, fmt.Errorf("unsupported file type %s", maybeFileUri)
+	return nil, sigerrors.Errorf("unsupported file type %s", maybeFileUri)
 }
 
 // copied from signoz clickhouse exporter's `sanitize` which

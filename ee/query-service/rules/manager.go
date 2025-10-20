@@ -93,7 +93,7 @@ func PrepareTaskFunc(opts baserules.PrepareTaskOptions) (baserules.Task, error) 
 		task = newTask(baserules.TaskTypeCh, opts.TaskName, time.Duration(evaluation.GetFrequency()), rules, opts.ManagerOpts, opts.NotifyFunc, opts.MaintenanceStore, opts.OrgID)
 
 	} else {
-		return nil, fmt.Errorf("unsupported rule type %s. Supported types: %s, %s", opts.Rule.RuleType, ruletypes.RuleTypeProm, ruletypes.RuleTypeThreshold)
+		return nil, errors.Errorf("unsupported rule type %s. Supported types: %s, %s", opts.Rule.RuleType, ruletypes.RuleTypeProm, ruletypes.RuleTypeThreshold)
 	}
 
 	return task, nil
@@ -106,7 +106,7 @@ func TestNotification(opts baserules.PrepareTestRuleOptions) (int, *basemodel.Ap
 	ctx := context.Background()
 
 	if opts.Rule == nil {
-		return 0, basemodel.BadRequest(fmt.Errorf("rule is required"))
+		return 0, basemodel.BadRequest(errors.Errorf("rule is required"))
 	}
 
 	parsedRule := opts.Rule
@@ -185,7 +185,7 @@ func TestNotification(opts baserules.PrepareTestRuleOptions) (int, *basemodel.Ap
 			return 0, basemodel.BadRequest(err)
 		}
 	} else {
-		return 0, basemodel.BadRequest(fmt.Errorf("failed to derive ruletype with given information"))
+		return 0, basemodel.BadRequest(errors.Errorf("failed to derive ruletype with given information"))
 	}
 
 	// set timestamp to current utc time
@@ -194,11 +194,11 @@ func TestNotification(opts baserules.PrepareTestRuleOptions) (int, *basemodel.Ap
 	count, err := rule.Eval(ctx, ts)
 	if err != nil {
 		zap.L().Error("evaluating rule failed", zap.String("rule", rule.Name()), zap.Error(err))
-		return 0, basemodel.InternalError(fmt.Errorf("rule evaluation failed"))
+		return 0, basemodel.InternalError(errors.Errorf("rule evaluation failed"))
 	}
 	alertsFound, ok := count.(int)
 	if !ok {
-		return 0, basemodel.InternalError(fmt.Errorf("something went wrong"))
+		return 0, basemodel.InternalError(errors.Errorf("something went wrong"))
 	}
 	rule.SendAlerts(ctx, ts, 0, time.Duration(1*time.Minute), opts.NotifyFunc)
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	sigerrors "github.com/SigNoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/query-service/model"
 	"github.com/SigNoz/signoz/pkg/sqlstore"
 	"github.com/SigNoz/signoz/pkg/types"
@@ -62,7 +63,7 @@ func (r *cloudProviderAccountsSQLRepository) listConnected(
 		Scan(ctx)
 
 	if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"could not query connected cloud accounts: %w", err,
 		))
 	}
@@ -83,11 +84,11 @@ func (r *cloudProviderAccountsSQLRepository) get(
 		Scan(ctx)
 
 	if err == sql.ErrNoRows {
-		return nil, model.NotFoundError(fmt.Errorf(
+		return nil, model.NotFoundError(sigerrors.Errorf(
 			"couldn't find account with Id %s", id,
 		))
 	} else if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"couldn't query cloud provider accounts: %w", err,
 		))
 	}
@@ -110,11 +111,11 @@ func (r *cloudProviderAccountsSQLRepository) getConnectedCloudAccount(
 		Scan(ctx)
 
 	if err == sql.ErrNoRows {
-		return nil, model.NotFoundError(fmt.Errorf(
+		return nil, model.NotFoundError(sigerrors.Errorf(
 			"couldn't find connected cloud account %s", accountId,
 		))
 	} else if err != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"couldn't query cloud provider accounts: %w", err,
 		))
 	}
@@ -201,14 +202,14 @@ func (r *cloudProviderAccountsSQLRepository) upsert(
 		Exec(ctx)
 
 	if dbErr != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"could not upsert cloud account record: %w", dbErr,
 		))
 	}
 
 	upsertedAccount, apiErr := r.get(ctx, orgId, provider, *id)
 	if apiErr != nil {
-		return nil, model.InternalError(fmt.Errorf(
+		return nil, model.InternalError(sigerrors.Errorf(
 			"couldn't fetch upserted account by id: %w", apiErr.ToError(),
 		))
 	}

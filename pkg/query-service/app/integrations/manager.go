@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 
+	sigerrors "github.com/SigNoz/pkg/errors"
+
 	"github.com/SigNoz/signoz/pkg/query-service/model"
 	"github.com/SigNoz/signoz/pkg/query-service/utils"
 	"github.com/SigNoz/signoz/pkg/sqlstore"
@@ -118,7 +120,7 @@ type Manager struct {
 func NewManager(store sqlstore.SQLStore) (*Manager, error) {
 	iiRepo, err := NewInstalledIntegrationsSqliteRepo(store)
 	if err != nil {
-		return nil, fmt.Errorf(
+		return nil, sigerrors.Errorf(
 			"could not init sqlite DB for installed integrations: %w", err,
 		)
 	}
@@ -297,7 +299,7 @@ func (m *Manager) parseDashboardUuid(dashboardUuid string) (
 ) {
 	parts := strings.SplitN(dashboardUuid, "--", 3)
 	if len(parts) != 3 || parts[0] != "integration" {
-		return "", "", model.BadRequest(fmt.Errorf(
+		return "", "", model.BadRequest(sigerrors.Errorf(
 			"invalid installed integration dashboard id",
 		))
 	}
@@ -326,7 +328,7 @@ func (m *Manager) GetInstalledIntegrationDashboardById(
 	}
 
 	if integration.Installation == nil {
-		return nil, model.BadRequest(fmt.Errorf(
+		return nil, model.BadRequest(sigerrors.Errorf(
 			"integration with id %s is not installed", integrationId,
 		))
 	}
@@ -353,7 +355,7 @@ func (m *Manager) GetInstalledIntegrationDashboardById(
 		}
 	}
 
-	return nil, model.NotFoundError(fmt.Errorf(
+	return nil, model.NotFoundError(sigerrors.Errorf(
 		"integration dashboard with id %s not found", dashboardUuid,
 	))
 }
@@ -402,7 +404,7 @@ func (m *Manager) getIntegrationDetails(
 	integrationId string,
 ) (*IntegrationDetails, *model.ApiError) {
 	if len(strings.TrimSpace(integrationId)) < 1 {
-		return nil, model.BadRequest(fmt.Errorf(
+		return nil, model.BadRequest(sigerrors.Errorf(
 			"integrationId is required",
 		))
 	}
@@ -418,7 +420,7 @@ func (m *Manager) getIntegrationDetails(
 
 	integrationDetails, wasFound := ais[integrationId]
 	if !wasFound {
-		return nil, model.NotFoundError(fmt.Errorf(
+		return nil, model.NotFoundError(sigerrors.Errorf(
 			"could not find integration: %s", integrationId,
 		))
 	}
@@ -469,7 +471,7 @@ func (m *Manager) getInstalledIntegrations(
 	for _, ii := range installations {
 		iDetails, exists := integrationDetails[ii.Type]
 		if !exists {
-			return nil, model.InternalError(fmt.Errorf(
+			return nil, model.InternalError(sigerrors.Errorf(
 				"couldn't find integration details for %s", ii.Type,
 			))
 		}

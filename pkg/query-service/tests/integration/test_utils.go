@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/SigNoz/signoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/instrumentation/instrumentationtest"
 	"github.com/SigNoz/signoz/pkg/modules/organization"
 	"github.com/SigNoz/signoz/pkg/modules/user"
@@ -212,11 +213,11 @@ func HandleTestRequest(handler http.Handler, req *http.Request, expectedStatus i
 	response := respWriter.Result()
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't read response body received from QS: %w", err)
+		return nil, errors.NewInternalf("couldn't read response body received from QS: %v", err)
 	}
 
 	if response.StatusCode != expectedStatus {
-		return nil, fmt.Errorf(
+		return nil, errors.NewInternalf(
 			"unexpected response status from query service for path %s. status: %d, body: %v\n%v",
 			req.URL.Path, response.StatusCode, string(responseBody), string(debug.Stack()),
 		)
@@ -225,7 +226,7 @@ func HandleTestRequest(handler http.Handler, req *http.Request, expectedStatus i
 	var result app.ApiResponse
 	err = json.Unmarshal(responseBody, &result)
 	if err != nil {
-		return nil, fmt.Errorf(
+		return nil, errors.NewInternalf(
 			"Could not unmarshal QS response into an ApiResponse.\nResponse body: %s",
 			string(responseBody),
 		)

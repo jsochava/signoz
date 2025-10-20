@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/SigNoz/signoz/pkg/errors"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )
@@ -60,7 +61,7 @@ func (g *GoogleOAuthConfig) GetProvider(domain string, siteUrl *url.URL) (OAuthC
 	provider, err := oidc.NewProvider(ctx, googleIssuerURL)
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("failed to get provider: %v", err)
+		return nil, errors.Wrapf(err, errors.TypeInternal, errors.CodeInternal, "failed to get provider")
 	}
 
 	// default to email and profile scope as we just use google auth

@@ -2,7 +2,6 @@ package instrumentation
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -40,10 +39,10 @@ func (rws readerWithServer) Shutdown(ctx context.Context) error {
 func prometheusReaderWithCustomRegistry(ctx context.Context, prometheusConfig *contribsdkconfig.Prometheus, customRegistry *prometheus.Registry) (sdkmetric.Reader, error) {
 	var opts []otelprom.Option
 	if prometheusConfig.Host == nil {
-		return nil, fmt.Errorf("host must be specified")
+		return nil, errors.New(errors.TypeInvalidInput, errors.CodeInvalidInput, "host must be specified")
 	}
 	if prometheusConfig.Port == nil {
-		return nil, fmt.Errorf("port must be specified")
+		return nil, errors.New(errors.TypeInvalidInput, errors.CodeInvalidInput, "port must be specified")
 	}
 	if prometheusConfig.WithoutScopeInfo != nil && *prometheusConfig.WithoutScopeInfo {
 		opts = append(opts, otelprom.WithoutScopeInfo())
@@ -78,13 +77,12 @@ func prometheusReaderWithCustomRegistry(ctx context.Context, prometheusConfig *c
 	mux.Handle("/metrics", promhttp.HandlerFor(customRegistry, promhttp.HandlerOpts{Registry: customRegistry}))
 	server := http.Server{
 		// Timeouts are necessary to make a server resilient to attacks, but ListenAndServe doesn't set any.
-		// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 		Handler:      mux,
 	}
-	addr := fmt.Sprintf("%s:%d", *prometheusConfig.Host, *prometheusConfig.Port)
+	addr := errors.Sprintf("%s:%d", *prometheusConfig.Host, *prometheusConfig.Port)
 
 	reader, err := otelprom.New(opts...)
 	if err != nil {
