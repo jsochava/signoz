@@ -2,6 +2,7 @@ package instrumentation
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -82,7 +83,7 @@ func prometheusReaderWithCustomRegistry(ctx context.Context, prometheusConfig *c
 		IdleTimeout:  120 * time.Second,
 		Handler:      mux,
 	}
-	addr := errors.Sprintf("%s:%d", *prometheusConfig.Host, *prometheusConfig.Port)
+	addr := fmt.Sprintf("%s:%d", *prometheusConfig.Host, *prometheusConfig.Port)
 
 	reader, err := otelprom.New(opts...)
 	if err != nil {
