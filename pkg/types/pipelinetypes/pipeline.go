@@ -65,7 +65,7 @@ func (i *GettablePipeline) ParseRawConfig() error {
 	c := []PipelineOperator{}
 	err := json.Unmarshal([]byte(i.ConfigJSON), &c)
 	if err != nil {
-		return errors.Wrap(err, "failed to parse ingestion rule config")
+		return errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "failed to parse ingestion rule config")
 	}
 	i.Config = c
 	return nil
@@ -75,7 +75,7 @@ func (i *GettablePipeline) ParseFilter() error {
 	f := v3.FilterSet{}
 	err := json.Unmarshal([]byte(i.FilterString), &f)
 	if err != nil {
-		return errors.Wrap(err, "failed to parse filter")
+		return errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "failed to parse filter")
 	}
 	i.Filter = &f
 	return nil

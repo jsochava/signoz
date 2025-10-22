@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	errors "github.com/SigNoz/pkg/errors"
+	errors "github.com/SigNoz/signoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/types/ssotypes"
 	"github.com/google/uuid"
 	saml2 "github.com/russellhaering/gosaml2"
@@ -80,7 +80,7 @@ func (od *GettableOrgDomain) LoadConfig(jsondata string) error {
 	d := *od
 	err := json.Unmarshal([]byte(jsondata), &d)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal json to OrgDomain{}")
+		return errors.WrapInvalidInputf(err, errors.CodeInvalidInput, "failed to marshal json to OrgDomain{}")
 	}
 	*od = d
 	return nil

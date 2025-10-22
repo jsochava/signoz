@@ -146,7 +146,7 @@ func (n *Notifier) Notify(ctx context.Context, as ...*types.Alert) (bool, error)
 	} else {
 		content, err := os.ReadFile(n.conf.WebhookURLFile)
 		if err != nil {
-			return false, errors.Errorf("read webhook_url_file: %w", err)
+			return false, errors.Wrapf(err, errors.TypeInvalidInput, errors.CodeInvalidInput, "read webhook_url_file")
 		}
 		url = strings.TrimSpace(string(content))
 	}

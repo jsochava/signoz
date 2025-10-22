@@ -100,7 +100,7 @@ func (writer *nonFlushingBadResponseLoggingWriter) Hijack() (net.Conn, *bufio.Re
 	if hj, ok := writer.rw.(http.Hijacker); ok {
 		return hj.Hijack()
 	}
-	return nil, nil, errors.Errorf("cannot cast underlying response writer to Hijacker")
+	return nil, nil, errors.Newf(errors.TypeInternal, errors.CodeInternal, "cannot cast underlying response writer to Hijacker")
 }
 
 func (writer *nonFlushingBadResponseLoggingWriter) StatusCode() int {

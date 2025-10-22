@@ -94,7 +94,7 @@ func (m *MockNotificationManager) CreateRoutePolicy(ctx context.Context, orgID s
 	}
 
 	if route == nil {
-		return errors.Errorf("route cannot be nil")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "route cannot be nil")
 	}
 
 	if err := route.Validate(); err != nil {
@@ -116,14 +116,14 @@ func (m *MockNotificationManager) CreateRoutePolicies(ctx context.Context, orgID
 	}
 
 	if len(routes) == 0 {
-		return errors.Errorf("routes cannot be empty")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "routes cannot be empty")
 	}
 	for i, route := range routes {
 		if route == nil {
-			return errors.Errorf("route at index %d cannot be nil", i)
+			return errors.NewInvalidInputf(errors.CodeInvalidInput, "route at index %d cannot be nil", i)
 		}
 		if err := route.Validate(); err != nil {
-			return errors.Errorf("route at index %d: %v", i, err)
+			return errors.Wrapf(err, errors.TypeInvalidInput, errors.CodeInvalidInput, "route at index %d", i)
 		}
 	}
 	for _, route := range routes {
@@ -142,13 +142,13 @@ func (m *MockNotificationManager) GetRoutePolicyByID(ctx context.Context, orgID 
 	}
 
 	if routeID == "" {
-		return nil, errors.Errorf("routeID cannot be empty")
+		return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "routeID cannot be empty")
 	}
 
 	routeKey := getKey(orgID, routeID)
 	route, exists := m.routes[routeKey]
 	if !exists {
-		return nil, errors.Errorf("route with ID %s not found", routeID)
+		return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "route with ID %s not found", routeID)
 	}
 
 	return route, nil
@@ -161,7 +161,7 @@ func (m *MockNotificationManager) GetAllRoutePolicies(ctx context.Context, orgID
 	}
 
 	if orgID == "" {
-		return nil, errors.Errorf("orgID cannot be empty")
+		return nil, errors.NewInvalidInputf(errors.CodeInvalidInput, "orgID cannot be empty")
 	}
 
 	var routes []*alertmanagertypes.RoutePolicy
@@ -182,13 +182,13 @@ func (m *MockNotificationManager) DeleteRoutePolicy(ctx context.Context, orgID s
 	}
 
 	if routeID == "" {
-		return errors.Errorf("routeID cannot be empty")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "routeID cannot be empty")
 	}
 
 	routeKey := getKey(orgID, routeID)
 	route, exists := m.routes[routeKey]
 	if !exists {
-		return errors.Errorf("route with ID %s not found", routeID)
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "route with ID %s not found", routeID)
 	}
 	delete(m.routes, routeKey)
 
@@ -217,11 +217,11 @@ func (m *MockNotificationManager) DeleteAllRoutePoliciesByName(ctx context.Conte
 	}
 
 	if orgID == "" {
-		return errors.Errorf("orgID cannot be empty")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "orgID cannot be empty")
 	}
 
 	if name == "" {
-		return errors.Errorf("name cannot be empty")
+		return errors.NewInvalidInputf(errors.CodeInvalidInput, "name cannot be empty")
 	}
 
 	nameKey := getKey(orgID, name)

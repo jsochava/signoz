@@ -13,7 +13,7 @@ import (
 	"github.com/SigNoz/signoz/pkg/telemetrystore/telemetrystoretest"
 	"github.com/SigNoz/signoz/pkg/telemetrytraces"
 	"github.com/SigNoz/signoz/pkg/types/telemetrytypes"
-	errors "github.com/SigNoz/pkg/errors"
+	sigerrors "github.com/SigNoz/signoz/pkg/errors"
 	cmock "github.com/srikanthccv/ClickHouse-go-mock"
 )
 
@@ -26,7 +26,11 @@ func (m *regexMatcher) Match(expectedSQL, actualSQL string) error {
 		return err
 	}
 	if !re.MatchString(actualSQL) {
-		return errors.Errorf("expected query to contain %s, got %s", expectedSQL, actualSQL)
+		return sigerrors.NewInvalidInputf(
+			sigerrors.CodeInvalidInput,
+			"expected query to contain %s, got %s",
+			expectedSQL, actualSQL,
+		)
 	}
 	return nil
 }

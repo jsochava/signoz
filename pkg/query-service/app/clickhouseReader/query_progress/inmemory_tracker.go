@@ -1,10 +1,11 @@
 package queryprogress
 
 import (
+	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
-	sigerrors "github.com/SigNoz/pkg/errors"
 	"github.com/SigNoz/signoz/pkg/query-service/model"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -25,8 +26,8 @@ func (tracker *inMemoryQueryProgressTracker) ReportQueryStarted(
 
 	_, exists := tracker.queries[queryId]
 	if exists {
-		return nil, model.BadRequest(sigerrors.Errorf(
-			"query %s already started", queryId,
+		return nil, model.BadRequest(errors.New(
+			fmt.Sprintf("query %s already started", queryId),
 		))
 	}
 
@@ -83,8 +84,8 @@ func (tracker *inMemoryQueryProgressTracker) getQueryTracker(
 
 	queryTracker := tracker.queries[queryId]
 	if queryTracker == nil {
-		return nil, model.NotFoundError(sigerrors.Errorf(
-			"query %s doesn't exist", queryId,
+		return nil, model.NotFoundError(errors.New(
+			fmt.Sprintf("query %s doesn't exist", queryId),
 		))
 	}
 
@@ -140,8 +141,8 @@ func (qt *queryTracker) subscribe() (
 	defer qt.lock.Unlock()
 
 	if qt.isFinished {
-		return nil, nil, model.NotFoundError(sigerrors.Errorf(
-			"query %s already finished", qt.queryId,
+		return nil, nil, model.NotFoundError(errors.New(
+			fmt.Sprintf("query %s already finished", qt.queryId),
 		))
 	}
 

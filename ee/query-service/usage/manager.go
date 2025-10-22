@@ -60,7 +60,7 @@ func New(licenseService licensing.Licensing, clickhouseConn clickhouse.Conn, zeu
 func (lm *Manager) Start(ctx context.Context) error {
 	// compares the locker and stateUnlocked if both are same lock is applied else returns error
 	if !atomic.CompareAndSwapUint32(&locker, stateUnlocked, stateLocked) {
-		return errors.Errorf("usage exporter is locked")
+		return errors.Newf(errors.TypeInternal, errors.CodeInternal, "usage exporter is locked")
 	}
 
 	// upload usage once when starting the service
@@ -74,6 +74,7 @@ func (lm *Manager) Start(ctx context.Context) error {
 	lm.scheduler.StartAsync()
 	return nil
 }
+
 func (lm *Manager) UploadUsage(ctx context.Context) {
 	organizations, err := lm.orgGetter.ListByOwnedKeyRange(ctx)
 	if err != nil {

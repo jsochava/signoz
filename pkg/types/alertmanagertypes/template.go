@@ -23,7 +23,7 @@ func FromGlobs(paths []string) (*alertmanagertemplate.Template, error) {
 	{{ define "__alertmanagerURL" }}{{ .ExternalURL }}/alerts{{ template "__ruleIdPath" . }}{{ end }}
 	{{ define "msteamsv2.default.titleLink" }}{{ template "__alertmanagerURL" . }}{{ end }}
 	`))); err != nil {
-		return nil, errors.Wrap(err, "error parsing alertmanager templates")
+		return nil, errors.Wrap(err, errors.TypeInternal, errors.CodeInternal, "error parsing alertmanager templates")
 	}
 
 	return t, nil
